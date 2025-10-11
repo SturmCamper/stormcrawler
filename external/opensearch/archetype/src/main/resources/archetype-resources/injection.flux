@@ -32,7 +32,7 @@ bolts:
     parallelism: 1
 
   - id: "queues"
-    className: "com.digitalpebble.stormcrawler.opensearch.persistence.QueueBolt"
+    className: "org.apache.stormcrawler.opensearch.persistence.QueueBolt"
     parallelism: 1
 
 streams:
