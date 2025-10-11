@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.tika;
@@ -20,9 +22,15 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 import org.apache.commons.lang.StringUtils;
 import org.apache.html.dom.HTMLDocumentImpl;
+import org.apache.http.HttpHeaders;
 import org.apache.storm.metric.api.MultiCountMetric;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -40,7 +48,6 @@ import org.apache.stormcrawler.parse.ParseFilter;
 import org.apache.stormcrawler.parse.ParseFilters;
 import org.apache.stormcrawler.parse.ParseResult;
 import org.apache.stormcrawler.persistence.Status;
-import org.apache.stormcrawler.protocol.HttpHeaders;
 import org.apache.stormcrawler.protocol.ProtocolResponse;
 import org.apache.stormcrawler.util.ConfUtils;
 import org.apache.stormcrawler.util.InitialisationUtil;
@@ -86,7 +93,7 @@ public class ParserBolt extends BaseRichBolt {
     private boolean emitOutlinks = true;
 
     /** regular expressions to apply to the mime-type * */
-    private List<String> mimeTypeWhiteList = new LinkedList<>();
+    private List<Pattern> mimeTypeWhiteList = new LinkedList<>();
 
     private String protocolMDprefix;
 
@@ -119,7 +126,15 @@ public class ParserBolt extends BaseRichBolt {
             throw e;
         }
 
-        mimeTypeWhiteList = ConfUtils.loadListFromConf("parser.mimetype.whitelist", conf);
+        final List<String> mimeTypeWhiteListStrings =
+                ConfUtils.loadListFromConf("parser.mimetype.whitelist", conf);
+        for (String mt : mimeTypeWhiteListStrings) {
+            try {
+                this.mimeTypeWhiteList.add(Pattern.compile(mt));
+            } catch (RuntimeException e) {
+                LOG.warn("Failed to compile whitelist regex: {}", mt);
+            }
+        }
 
         protocolMDprefix = ConfUtils.getString(conf, ProtocolResponse.PROTOCOL_MD_PREFIX_PARAM, "");
 
@@ -143,7 +158,7 @@ public class ParserBolt extends BaseRichBolt {
         Metadata metadata = (Metadata) tuple.getValueByField("metadata");
 
         // check that the mimetype is in the whitelist
-        if (mimeTypeWhiteList.size() > 0) {
+        if (!mimeTypeWhiteList.isEmpty()) {
             boolean mt_match = false;
             // see if a mimetype was guessed in JSOUPBolt
             String mimeType = metadata.getFirstValue("parse.Content-Type");
@@ -152,8 +167,8 @@ public class ParserBolt extends BaseRichBolt {
                 mimeType = metadata.getFirstValue(HttpHeaders.CONTENT_TYPE, this.protocolMDprefix);
             }
             if (mimeType != null) {
-                for (String mt : mimeTypeWhiteList) {
-                    if (mimeType.matches(mt)) {
+                for (Pattern mt : mimeTypeWhiteList) {
+                    if (mt.matcher(mimeType).matches()) {
                         mt_match = true;
                         break;
                     }
@@ -406,5 +421,12 @@ public class ParserBolt extends BaseRichBolt {
             outlinks.putIfAbsent(urlOL, ol);
         }
         return new ArrayList<>(outlinks.values());
+    }
+
+    @Override
+    public void cleanup() {
+        if (parseFilters != null) {
+            parseFilters.cleanup();
+        }
     }
 }

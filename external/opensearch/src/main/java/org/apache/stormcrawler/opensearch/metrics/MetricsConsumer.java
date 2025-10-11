@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.opensearch.metrics;
@@ -20,7 +22,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.storm.metric.api.IMetricsConsumer;
@@ -35,12 +37,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Sends metrics to an Elasticsearch index. The ES details are set in the configuration; an optional
- * argument sets a date format to append to the index name.
+ * Sends metrics to an OpenSearch index. The OpenSearch details are set in the configuration; an
+ * optional argument sets a date format to append to the index name.
  *
  * <pre>
  *   topology.metrics.consumer.register:
- *        - class: "org.apache.stormcrawler.elasticsearch.metrics.MetricsConsumer"
+ *        - class: "org.apache.stormcrawler.opensearch.metrics.MetricsConsumer"
  *          parallelism.hint: 1
  *          argument: "yyyy-MM-dd"
  * </pre>
@@ -66,14 +68,14 @@ public class MetricsConsumer implements IMetricsConsumer {
 
     @Override
     public void prepare(
-            Map stormConf,
+            Map<String, Object> stormConf,
             Object registrationArgument,
             TopologyContext context,
             IErrorReporter errorReporter) {
         indexName = ConfUtils.getString(stormConf, OSMetricsIndexNameParamName, "metrics");
         stormID = context.getStormId();
         if (registrationArgument != null) {
-            dateFormat = new SimpleDateFormat((String) registrationArgument);
+            dateFormat = new SimpleDateFormat((String) registrationArgument, Locale.ROOT);
             LOG.info("Using date format {}", registrationArgument);
         }
         try {
@@ -109,14 +111,12 @@ public class MetricsConsumer implements IMetricsConsumer {
         if (value instanceof Number) {
             indexDataPoint(taskInfo, now, nameprefix, ((Number) value).doubleValue());
         } else if (value instanceof Map) {
-            Iterator<Entry> keyValiter = ((Map) value).entrySet().iterator();
-            while (keyValiter.hasNext()) {
-                Entry entry = keyValiter.next();
+            for (Entry<String, Object> entry : ((Map<String, Object>) value).entrySet()) {
                 String newnameprefix = nameprefix + "." + entry.getKey();
                 handleDataPoints(taskInfo, newnameprefix, entry.getValue(), now);
             }
         } else if (value instanceof Collection) {
-            for (Object collectionObj : (Collection) value) {
+            for (Object collectionObj : (Collection<Object>) value) {
                 handleDataPoints(taskInfo, nameprefix, collectionObj, now);
             }
         } else {
@@ -153,7 +153,7 @@ public class MetricsConsumer implements IMetricsConsumer {
             IndexRequest indexRequest = new IndexRequest(getIndexName(timestamp)).source(builder);
             connection.addToProcessor(indexRequest);
         } catch (Exception e) {
-            LOG.error("problem when building request for ES", e);
+            LOG.error("problem when building request for OpenSearch", e);
         }
     }
 }

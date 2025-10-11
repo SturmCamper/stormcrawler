@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.protocol;
@@ -24,9 +26,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.apache.storm.Config;
 import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.util.ConfUtils;
+import org.apache.stormcrawler.util.URLUtil;
 
 /**
  * This class is used for parsing robots for urls belonging to HTTP protocol. It extends the generic
@@ -125,7 +129,7 @@ public class HttpRobotRulesParser extends RobotRulesParser {
         LOG.debug("Cache miss {} for {}", cacheKey, url);
         List<Integer> bytesFetched = new LinkedList<>();
         try {
-            robotsUrl = new URL(url, "/robots.txt");
+            robotsUrl = URLUtil.resolveURL(url, "/robots.txt");
             ProtocolResponse response = http.getProtocolOutput(robotsUrl.toString(), fetchRobotsMd);
             int code = response.getStatusCode();
             bytesFetched.add(response.getContent() != null ? response.getContent().length : 0);
@@ -143,7 +147,7 @@ public class HttpRobotRulesParser extends RobotRulesParser {
                 String redirection = response.getMetadata().getFirstValue(HttpHeaders.LOCATION);
                 LOG.debug("Redirected from {} to {}", redir, redirection);
                 if (StringUtils.isNotBlank(redirection)) {
-                    redir = new URL(redir, redirection);
+                    redir = URLUtil.resolveURL(redir, redirection);
                     if (redir.getPath().equals("/robots.txt") && redir.getQuery() == null) {
                         // only if the path (including the query part) of the redirect target is
                         // `/robots.txt` we can get/put the rules from/to the cache under the host

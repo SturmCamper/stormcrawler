@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.bolt;
@@ -23,13 +25,17 @@ import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import java.io.ByteArrayInputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -43,7 +49,6 @@ import org.apache.stormcrawler.parse.ParseFilter;
 import org.apache.stormcrawler.parse.ParseFilters;
 import org.apache.stormcrawler.parse.ParseResult;
 import org.apache.stormcrawler.persistence.Status;
-import org.apache.stormcrawler.protocol.HttpHeaders;
 import org.apache.stormcrawler.protocol.ProtocolResponse;
 import org.apache.stormcrawler.util.ConfUtils;
 import org.slf4j.LoggerFactory;
@@ -83,7 +88,7 @@ public class FeedParserBolt extends StatusEmitterBolt {
                     isfeed = true;
                 } else {
                     // try based on the first bytes?
-                    byte[] clue = "<rss ".getBytes();
+                    byte[] clue = "<rss ".getBytes(StandardCharsets.UTF_8);
                     byte[] beginning = content;
                     final int maxOffsetGuess = 100;
                     if (content.length > maxOffsetGuess) {
@@ -193,7 +198,8 @@ public class FeedParserBolt extends StatusEmitterBolt {
             if (publishedDate != null) {
                 // filter based on the published date
                 if (filterHoursSincePub != -1) {
-                    Calendar rightNow = Calendar.getInstance();
+                    Calendar rightNow =
+                            Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.ROOT);
                     rightNow.add(Calendar.HOUR, -filterHoursSincePub);
                     if (publishedDate.before(rightNow.getTime())) {
                         LOG.info(
@@ -233,5 +239,12 @@ public class FeedParserBolt extends StatusEmitterBolt {
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         super.declareOutputFields(declarer);
         declarer.declare(new Fields("url", "content", "metadata"));
+    }
+
+    @Override
+    public void cleanup() {
+        if (parseFilters != null) {
+            parseFilters.cleanup();
+        }
     }
 }

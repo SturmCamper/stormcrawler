@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.parse;
@@ -21,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.cli.CommandLine;
@@ -143,6 +146,13 @@ public class ParseFilters extends ParseFilter implements JSONResource {
         }
     }
 
+    @Override
+    public void cleanup() {
+        for (ParseFilter filter : filters) {
+            filter.cleanup();
+        }
+    }
+
     /**
      * * Used for quick testing + debugging
      *
@@ -178,7 +188,7 @@ public class ParseFilters extends ParseFilter implements JSONResource {
 
         byte[] content = IOUtils.toByteArray((new URL(url)).openStream());
 
-        Document doc = Jsoup.parse(new String(content), url);
+        Document doc = Jsoup.parse(new String(content, StandardCharsets.UTF_8), url);
 
         filters.filter(url, content, DocumentFragmentBuilder.fromJsoup(doc), parse);
 

@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.jsoup;
@@ -22,85 +24,72 @@ import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.TestUtil;
 import org.apache.stormcrawler.bolt.JSoupParserBolt;
 import org.apache.stormcrawler.parse.ParsingTester;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /** Test the JSoup filters * */
-public class JSoupFiltersTest extends ParsingTester {
+class JSoupFiltersTest extends ParsingTester {
 
-    @Before
-    public void setupParserBolt() {
+    @BeforeEach
+    void setupParserBolt() {
         bolt = new JSoupParserBolt();
         setupParserBolt(bolt);
     }
 
-    protected void prepareParserBolt(String configFile, Map parserConfig) {
+    protected void prepareParserBolt(String configFile, Map<String, Object> parserConfig) {
         parserConfig.put("jsoup.filters.config.file", configFile);
         bolt.prepare(
                 parserConfig, TestUtil.getMockedTopologyContext(), new OutputCollector(output));
     }
 
     @Test
-    public void testBasicExtraction() throws IOException {
-
+    void testBasicExtraction() throws IOException {
         prepareParserBolt("test.jsoupfilters.json");
-
-        parse("http://www.digitalpebble.com", "digitalpebble.com.html");
-
-        Assert.assertEquals(1, output.getEmitted().size());
+        parse("https://stormcrawler.apache.org", "stormcrawler.apache.org.html");
+        Assertions.assertEquals(1, output.getEmitted().size());
         List<Object> parsedTuple = output.getEmitted().get(0);
         Metadata metadata = (Metadata) parsedTuple.get(2);
-        Assert.assertNotNull(metadata);
+        Assertions.assertNotNull(metadata);
         String concept = metadata.getFirstValue("concept");
-        Assert.assertNotNull(concept);
-
+        Assertions.assertNotNull(concept);
         concept = metadata.getFirstValue("concept2");
-        Assert.assertNotNull(concept);
+        Assertions.assertNotNull(concept);
     }
 
     @Test
-    // https://github.com/DigitalPebble/storm-crawler/issues/219
-    public void testScriptExtraction() throws IOException {
-
+    // https://github.com/apache/stormcrawler/issues/219
+    void testScriptExtraction() throws IOException {
         prepareParserBolt("test.jsoupfilters.json");
-
-        parse("http://www.digitalpebble.com", "digitalpebble.com.html");
-
-        Assert.assertEquals(1, output.getEmitted().size());
+        parse("https://stormcrawler.apache.org", "stormcrawler.apache.org.html");
+        Assertions.assertEquals(1, output.getEmitted().size());
         List<Object> parsedTuple = output.getEmitted().get(0);
         Metadata metadata = (Metadata) parsedTuple.get(2);
-        Assert.assertNotNull(metadata);
+        Assertions.assertNotNull(metadata);
         String[] scripts = metadata.getValues("js");
-        Assert.assertNotNull(scripts);
+        Assertions.assertNotNull(scripts);
         // should be 2 of them
-        Assert.assertEquals(2, scripts.length);
-        Assert.assertEquals("", scripts[0].trim());
-        Assert.assertTrue(scripts[1].contains("urchinTracker();"));
+        Assertions.assertEquals(2, scripts.length);
+        Assertions.assertEquals("", scripts[0].trim());
+        Assertions.assertTrue(scripts[1].contains("_paq"));
     }
 
     @Test
-    public void testLDJsonExtraction() throws IOException {
-
+    void testLDJsonExtraction() throws IOException {
         prepareParserBolt("test.jsoupfilters.json");
-
-        parse("http://www.digitalpebble.com", "digitalpebble.com.html");
-
-        Assert.assertEquals(1, output.getEmitted().size());
+        parse("https://stormcrawler.apache.org", "stormcrawler.apache.org.html");
+        Assertions.assertEquals(1, output.getEmitted().size());
         List<Object> parsedTuple = output.getEmitted().get(0);
         Metadata metadata = (Metadata) parsedTuple.get(2);
-        Assert.assertNotNull(metadata);
+        Assertions.assertNotNull(metadata);
         String[] scripts = metadata.getValues("streetAddress");
-        Assert.assertNotNull(scripts);
+        Assertions.assertNotNull(scripts);
     }
 
     @Test
-    public void testExtraLink() throws IOException {
-
+    void testExtraLink() throws IOException {
         prepareParserBolt("test.jsoupfilters.json");
-
-        parse("http://www.digitalpebble.com", "digitalpebble.com.html");
-
-        Assert.assertEquals(16, output.getEmitted("status").size());
+        parse("https://stormcrawler.apache.org", "stormcrawler.apache.org.html");
+        Assertions.assertEquals(31, output.getEmitted("status").size());
     }
 }

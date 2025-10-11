@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.util;
@@ -42,7 +44,23 @@ public class URLUtil {
             return fixPureQueryTargets(base, target);
         }
 
-        return new URL(base, target);
+        return resolveURLInternal(base, target);
+    }
+
+    /**
+     * Refactor deprecated URL constructor to use the URI class for resolving relative URLs
+     *
+     * @param base the base URL
+     * @param target the target URL (may be relative)
+     * @return resolved absolute URL.
+     * @throws MalformedURLException if the URL is not well formed
+     */
+    private static URL resolveURLInternal(URL base, String target) throws MalformedURLException {
+        try {
+            return base.toURI().resolve(target).toURL();
+        } catch (Exception e) {
+            throw (MalformedURLException) new MalformedURLException(e.getMessage()).initCause(e);
+        }
     }
 
     /** Handle the case in RFC3986 section 5.4.1 example 7, and similar. */
@@ -53,17 +71,17 @@ public class URLUtil {
             final String baseRightMost = basePath.substring(baseRightMostIdx + 1);
             target = baseRightMost + target;
         }
-        return new URL(base, target);
+        return resolveURLInternal(base, target);
     }
 
     /**
      * Handles cases where the url param information is encoded into the base url as opposed to the
      * target.
      *
-     * <p>If the taget contains params (i.e. ';xxxx') information then the target params information
-     * is assumed to be correct and any base params information is ignored. If the base contains
-     * params information but the tareget does not, then the params information is moved to the
-     * target allowing it to be correctly determined by the java.net.URL class.
+     * <p>If the target contains params (i.e. ';xxxx') information then the target params
+     * information is assumed to be correct and any base params information is ignored. If the base
+     * contains params information but the target does not, then the params information is moved to
+     * the target allowing it to be correctly determined by the java.net.URL class.
      *
      * @param base The base URL.
      * @param target The target path from the base URL.
@@ -75,7 +93,7 @@ public class URLUtil {
         // the target contains params information or the base doesn't then no
         // conversion necessary, return regular URL
         if (target.indexOf(';') >= 0 || base.toString().indexOf(';') == -1) {
-            return new URL(base, target);
+            return resolveURLInternal(base, target);
         }
 
         // get the base url and it params information
@@ -94,7 +112,7 @@ public class URLUtil {
             target += params;
         }
 
-        return new URL(base, target);
+        return resolveURLInternal(base, target);
     }
 
     private static Pattern IP_PATTERN = Pattern.compile("(\\d{1,3}\\.){3}(\\d{1,3})");

@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.bolt;
@@ -36,6 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.apache.storm.Config;
 import org.apache.storm.metric.api.MeanReducer;
 import org.apache.storm.metric.api.MultiCountMetric;
@@ -51,7 +54,6 @@ import org.apache.storm.utils.Utils;
 import org.apache.stormcrawler.Constants;
 import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.persistence.Status;
-import org.apache.stormcrawler.protocol.HttpHeaders;
 import org.apache.stormcrawler.protocol.Protocol;
 import org.apache.stormcrawler.protocol.ProtocolFactory;
 import org.apache.stormcrawler.protocol.ProtocolResponse;
@@ -507,7 +509,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                     metadata = new Metadata();
                 }
 
-                // https://github.com/DigitalPebble/storm-crawler/issues/813
+                // https://github.com/apache/stormcrawler/issues/813
                 metadata.remove("fetch.exception");
 
                 boolean asap = false;
@@ -533,7 +535,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                     // autodiscovery of sitemaps
                     // the sitemaps will be sent down the topology
                     // if the robot file did not come from the cache
-                    // to avoid sending them unecessarily
+                    // to avoid sending them unnecessarily
 
                     // check in the metadata if discovery setting has been
                     // overridden
@@ -566,7 +568,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                     }
 
                     // has found sitemaps
-                    // https://github.com/DigitalPebble/storm-crawler/issues/710
+                    // https://github.com/apache/stormcrawler/issues/710
                     // note: we don't care if the sitemap URLs where actually
                     // kept
                     boolean foundSitemap = (rules.getSitemaps().size() > 0);
@@ -730,7 +732,7 @@ public class FetcherBolt extends StatusEmitterBolt {
                             mergedMD.setValue("_redirTo", redirection);
                         }
 
-                        // https://github.com/DigitalPebble/storm-crawler/issues/954
+                        // https://github.com/apache/stormcrawler/issues/954
                         if (allowRedirs() && StringUtils.isNotBlank(redirection)) {
                             emitOutlink(fit.t, url, redirection, mergedMD);
                         }
@@ -990,17 +992,13 @@ public class FetcherBolt extends StatusEmitterBolt {
         StringBuilder sb = new StringBuilder();
         synchronized (fetchQueues.queues) {
             sb.append("\nNum queues : ").append(fetchQueues.queues.size());
-            Iterator<Entry<String, FetchItemQueue>> iterator =
-                    fetchQueues.queues.entrySet().iterator();
-            while (iterator.hasNext()) {
-                Entry<String, FetchItemQueue> entry = iterator.next();
+            for (Entry<String, FetchItemQueue> entry : fetchQueues.queues.entrySet()) {
                 sb.append("\nQueue ID : ").append(entry.getKey());
                 FetchItemQueue fiq = entry.getValue();
                 sb.append("\t size : ").append(fiq.getQueueSize());
                 sb.append("\t in progress : ").append(fiq.getInProgressSize());
-                Iterator<FetchItem> urlsIter = fiq.queue.iterator();
-                while (urlsIter.hasNext()) {
-                    sb.append("\n\t").append(urlsIter.next().url);
+                for (FetchItem fetchItem : fiq.queue) {
+                    sb.append("\n\t").append(fetchItem.url);
                 }
             }
             LOG.info("Dumping queue content {}", sb.toString());

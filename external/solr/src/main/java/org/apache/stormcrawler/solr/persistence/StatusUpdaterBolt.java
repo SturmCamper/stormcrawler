@@ -1,33 +1,37 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.solr.persistence;
 
 import java.util.Date;
-import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.commons.lang.StringUtils;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
-import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.tuple.Tuple;
 import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.persistence.AbstractStatusUpdaterBolt;
 import org.apache.stormcrawler.persistence.Status;
+import org.apache.stormcrawler.solr.Constants;
 import org.apache.stormcrawler.solr.SolrConnection;
 import org.apache.stormcrawler.util.ConfUtils;
+import org.apache.stormcrawler.util.URLPartitioner;
 import org.apache.stormcrawler.util.URLUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +45,14 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
     private static final String SolrMetadataPrefix = "solr.status.metadata.prefix";
 
+    private static final String SolrStatusRoutingFieldParamName =
+            Constants.PARAMPREFIX + "%s.routing.fieldname";
+
+    private URLPartitioner partitioner;
+
+    /** Store the key used for routing explicitly as a field in metadata * */
+    private String fieldNameForRoutingKey = null;
+
     private String mdPrefix;
 
     private SolrConnection connection;
@@ -53,6 +65,25 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         mdPrefix = ConfUtils.getString(stormConf, SolrMetadataPrefix, "metadata");
 
+        partitioner = new URLPartitioner();
+        partitioner.configure(stormConf);
+
+        fieldNameForRoutingKey =
+                ConfUtils.getString(
+                        stormConf,
+                        String.format(
+                                Locale.ROOT,
+                                StatusUpdaterBolt.SolrStatusRoutingFieldParamName,
+                                BOLT_TYPE));
+
+        if (StringUtils.isNotBlank(fieldNameForRoutingKey)) {
+            if (fieldNameForRoutingKey.startsWith("metadata.")) {
+                fieldNameForRoutingKey = fieldNameForRoutingKey.substring("metadata.".length());
+                fieldNameForRoutingKey =
+                        String.format(Locale.ROOT, "%s.%s", mdPrefix, fieldNameForRoutingKey);
+            }
+        }
+
         try {
             connection = SolrConnection.getConnection(stormConf, BOLT_TYPE);
         } catch (Exception e) {
@@ -60,9 +91,6 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
             throw new RuntimeException(e);
         }
     }
-
-    @Override
-    public void declareOutputFields(OutputFieldsDeclarer declarer) {}
 
     @Override
     public void store(
@@ -77,18 +105,26 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt {
 
         doc.setField("status", status.name());
 
-        Iterator<String> keyIterator = metadata.keySet().iterator();
-        while (keyIterator.hasNext()) {
-            String key = keyIterator.next();
+        for (String key : metadata.keySet()) {
             String[] values = metadata.getValues(key);
-            doc.setField(String.format("%s.%s", mdPrefix, key), values);
+            doc.setField(String.format(Locale.ROOT, "%s.%s", mdPrefix, key), values);
+        }
+
+        String partitionKey = partitioner.getPartition(url, metadata);
+        if (partitionKey == null) {
+            partitionKey = "_DEFAULT_";
+        }
+
+        // store routing key?
+        if (StringUtils.isNotBlank(fieldNameForRoutingKey)) {
+            doc.setField(fieldNameForRoutingKey, partitionKey);
         }
 
         if (nextFetch.isPresent()) {
             doc.setField("nextFetchDate", nextFetch.get());
         }
 
-        connection.getClient().add(doc);
+        connection.addAsync(doc);
 
         super.ack(t, url);
     }

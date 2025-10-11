@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.filtering.basic;
@@ -48,7 +50,7 @@ public class BasicURLNormalizer extends URLFilter {
     /** Nutch 1098 - finds URL encoded parts of the URL */
     private static final Pattern unescapeRulePattern = Pattern.compile("%([0-9A-Fa-f]{2})");
 
-    /** https://github.com/DigitalPebble/storm-crawler/issues/401 * */
+    /** https://github.com/apache/stormcrawler/issues/401 * */
     private static final Pattern illegalEscapePattern = Pattern.compile("%u([0-9A-Fa-f]{4})");
 
     // charset used for encoding URLs before escaping
@@ -289,7 +291,7 @@ public class BasicURLNormalizer extends URLFilter {
     }
 
     Comparator<NameValuePair> comp =
-            new Comparator<NameValuePair>() {
+            new Comparator<>() {
                 @Override
                 public int compare(NameValuePair p1, NameValuePair p2) {
                     return p1.getName().compareTo(p2.getName());

@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.filtering.basic;
@@ -29,6 +31,10 @@ public class BasicURLFilter extends URLFilter {
     private int maxPathRepetition = 3;
     private int maxLength = -1;
 
+    // Minimum number of path segments required before a repetition can occur
+    // e.g.http://www.example.com/path/path will need 5 parts to have a repetition
+    private static final int MINIMUM_PATH_LENGTH = 5;
+
     @Nullable
     public String filter(
             @Nullable URL sourceUrl,
@@ -38,15 +44,16 @@ public class BasicURLFilter extends URLFilter {
             return null;
         }
         if (maxPathRepetition > 1) {
-            urlToFilter = filterPathRepet(urlToFilter);
+            urlToFilter = filterPathRepeat(urlToFilter);
         }
         return urlToFilter;
     }
 
-    public final String filterPathRepet(String urlToFilter) {
+    public final String filterPathRepeat(String urlToFilter) {
         // check whether a path element is repeated N times
         String[] paths = urlToFilter.split("/");
-        if (paths.length <= 4) return urlToFilter;
+
+        if (paths.length < MINIMUM_PATH_LENGTH) return urlToFilter;
 
         Map<String, Integer> count = new HashMap<>();
         for (String s : paths) {
@@ -70,9 +77,9 @@ public class BasicURLFilter extends URLFilter {
 
     @Override
     public void configure(@NotNull Map<String, Object> stormConf, @NotNull JsonNode filterParams) {
-        JsonNode repet = filterParams.get("maxPathRepetition");
-        if (repet != null) {
-            maxPathRepetition = repet.asInt(3);
+        JsonNode repeat = filterParams.get("maxPathRepetition");
+        if (repeat != null) {
+            maxPathRepetition = repeat.asInt(3);
         }
 
         JsonNode length = filterParams.get("maxLength");

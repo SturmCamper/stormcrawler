@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.opensearch.persistence;
@@ -24,6 +26,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -63,7 +66,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Simple bolt which stores the status of URLs into ElasticSearch. Takes the tuples coming from the
+ * Simple bolt which stores the status of URLs into OpenSearch. Takes the tuples coming from the
  * 'status' stream. To be used in combination with a Spout to read from the index.
  */
 public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt
@@ -124,13 +127,19 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt
         indexName =
                 ConfUtils.getString(
                         stormConf,
-                        String.format(StatusUpdaterBolt.OSStatusIndexNameParamName, OSBoltType),
+                        String.format(
+                                Locale.ROOT,
+                                StatusUpdaterBolt.OSStatusIndexNameParamName,
+                                OSBoltType),
                         "status");
 
         doRouting =
                 ConfUtils.getBoolean(
                         stormConf,
-                        String.format(StatusUpdaterBolt.OSStatusRoutingParamName, OSBoltType),
+                        String.format(
+                                Locale.ROOT,
+                                StatusUpdaterBolt.OSStatusRoutingParamName,
+                                OSBoltType),
                         false);
 
         partitioner = new URLPartitioner();
@@ -139,13 +148,16 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt
         fieldNameForRoutingKey =
                 ConfUtils.getString(
                         stormConf,
-                        String.format(StatusUpdaterBolt.OSStatusRoutingFieldParamName, OSBoltType));
+                        String.format(
+                                Locale.ROOT,
+                                StatusUpdaterBolt.OSStatusRoutingFieldParamName,
+                                OSBoltType));
         if (StringUtils.isNotBlank(fieldNameForRoutingKey)) {
             if (fieldNameForRoutingKey.startsWith("metadata.")) {
                 routingFieldNameInMetadata = true;
                 fieldNameForRoutingKey = fieldNameForRoutingKey.substring("metadata.".length());
             }
-            // periods are not allowed in ES2 - replace with %2E
+            // periods are not allowed in - replace with %2E
             fieldNameForRoutingKey = fieldNameForRoutingKey.replaceAll("\\.", "%2E");
         }
 
@@ -204,10 +216,10 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt
 
         boolean isAlreadySentAndDiscovered;
         // need to synchronize: otherwise it might get added to the cache
-        // without having been sent to ES
+        // without having been sent to OpenSearch
         waitAckLock.lock();
         try {
-            // check that the same URL is not being sent to ES
+            // check that the same URL is not being sent to OpenSearch
             final var alreadySent = waitAck.getIfPresent(documentID);
             isAlreadySentAndDiscovered = status.equals(Status.DISCOVERED) && alreadySent != null;
         } finally {
@@ -235,7 +247,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt
         builder.startObject("metadata");
         for (String mdKey : metadata.keySet()) {
             String[] values = metadata.getValues(mdKey);
-            // periods are not allowed in ES2 - replace with %2E
+            // periods are not allowed - replace with %2E
             mdKey = mdKey.replaceAll("\\.", "%2E");
             builder.array(mdKey, values);
         }
@@ -289,7 +301,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt
             waitAckLock.unlock();
         }
 
-        LOG.debug("Sending to ES buffer {} with ID {}", url, documentID);
+        LOG.debug("Sending to OpenSearch buffer {} with ID {}", url, documentID);
 
         connection.addToProcessor(request);
     }
@@ -333,7 +345,7 @@ public class StatusUpdaterBolt extends AbstractStatusUpdaterBolt
                                     return new BulkItemResponseToFailedFlag(bir, failed);
                                 })
                         .collect(
-                                // https://github.com/DigitalPebble/storm-crawler/issues/832
+                                // https://github.com/apache/stormcrawler/issues/832
                                 Collectors.groupingBy(
                                         idWithFailedFlagTuple -> idWithFailedFlagTuple.id,
                                         Collectors.toUnmodifiableList()));

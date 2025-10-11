@@ -1,57 +1,28 @@
-Thanks for contributing to StormCrawler, your efforts are appreciated!
+Thank you for contributing to Apache StormCrawler.
 
-Developer Certificate of Origin
-===============================
+In order to streamline the review of the contribution we ask you
+to ensure the following steps have been taken:
 
-By contributing to StormCrawler, you accept and agree to the following terms and conditions (the *Developer Certificate of Origin*) for your present and future contributions submitted to StormCrawler. 
-Please refer to the *Developer Certificate of Origin* section in [`CONTRIBUTING.md`](CONTRIBUTING.md) for details.
+### For all changes
 
-```
-Developer Certificate of Origin
-Version 1.1
+- [ ] Is there a issue associated with this PR? Is it referenced in the commit message?
 
-Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
-1 Letterman Drive
-Suite D4700
-San Francisco, CA, 94129
+- [ ] Does your PR title start with `#XXXX` where `XXXX` is the issue number you are trying to resolve?
 
-Everyone is permitted to copy and distribute verbatim copies of this
-license document, but changing it is not allowed.
+- [ ] Has your PR been rebased against the latest commit within the target branch (typically main)?
 
+- [ ] Is your initial contribution a single, squashed commit?
 
-Developer's Certificate of Origin 1.1
+- [ ] Is the code properly formatted with `mvn git-code-format:format-code -Dgcf.globPattern="**/*" -Dskip.format.code=false`?
 
-By making a contribution to this project, I certify that:
+### For code changes
 
-(a) The contribution was created in whole or in part by me and I
-    have the right to submit it under the open source license
-    indicated in the file; or
+- [ ] Have you ensured that the full suite of tests is executed via `mvn clean verify`?
+- [ ] Have you written or updated unit tests to verify your changes?
+- [ ] If adding new dependencies to the code, are these dependencies licensed in a way that is compatible for inclusion under [ASF 2.0](http://www.apache.org/legal/resolved.html#category-a)?
+- [ ] If applicable, have you updated the LICENSE file, including the main LICENSE file?
+- [ ] If applicable, have you updated the NOTICE file, including the main NOTICE file?
 
-(b) The contribution is based upon previous work that, to the best
-    of my knowledge, is covered under an appropriate open source
-    license and I have the right under that license to submit that
-    work with modifications, whether created in whole or in part
-    by me, under the same open source license (unless I am
-    permitted to submit under a different license), as indicated
-    in the file; or
+### Note
 
-(c) The contribution was provided directly to me by some other
-    person who certified (a), (b) or (c) and I have not modified
-    it.
-
-(d) I understand and agree that this project and the contribution
-    are public and that a record of the contribution (including all
-    personal information I submit with it, including my sign-off) is
-    maintained indefinitely and may be redistributed consistent with
-    this project or the open source license(s) involved.
-```
-
-Before opening a PR, please check that: 
-
-* You've squashed your commits into a single one
-* You've described what the PR does or at least point to a related issue
-* You've signed-ff your commits with 'git commit -s'
-* The code is properly formatted with 'mvn git-code-format:format-code -Dgcf.globPattern=**/*'
-
-Thanks!
-
+Please ensure that once the PR is submitted, you check GitHub Actions for build issues and submit an update to your PR as soon as possible.

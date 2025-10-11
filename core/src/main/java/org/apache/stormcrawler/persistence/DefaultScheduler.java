@@ -1,20 +1,28 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.persistence;
 
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.stormcrawler.Constants;
@@ -58,9 +66,7 @@ public class DefaultScheduler extends Scheduler {
         // e.g. fetchInterval.FETCH_ERROR.isFeed=true
         Map<String, CustomInterval> intervals = new HashMap<>();
         Pattern pattern = Pattern.compile("^fetchInterval(\\..+?)?\\.(.+)=(.+)");
-        Iterator<String> keyIter = stormConf.keySet().iterator();
-        while (keyIter.hasNext()) {
-            String key = keyIter.next();
+        for (String key : stormConf.keySet()) {
             Matcher m = pattern.matcher(key);
             if (!m.matches()) {
                 continue;
@@ -87,12 +93,8 @@ public class DefaultScheduler extends Scheduler {
         customIntervals = intervals.values().toArray(new CustomInterval[0]);
     }
 
-    /*
-     * (non-Javadoc)
-     *
-     * @see org.apache.stormcrawler.persistence.Scheduler#schedule(com.
-     * digitalpebble. stormcrawler.persistence .Status,
-     * org.apache.stormcrawler.Metadata)
+    /**
+     * @see org.apache.stormcrawler.persistence.Scheduler#schedule(Status, Metadata)
      */
     @Override
     public Optional<Date> schedule(Status status, Metadata metadata) {
@@ -138,7 +140,7 @@ public class DefaultScheduler extends Scheduler {
             return Optional.empty();
         }
 
-        Calendar cal = Calendar.getInstance();
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.ROOT);
         cal.add(Calendar.MINUTE, minutesIncrement);
 
         return Optional.of(cal.getTime());

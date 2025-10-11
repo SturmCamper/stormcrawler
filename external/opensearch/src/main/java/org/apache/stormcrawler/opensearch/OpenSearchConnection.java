@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.opensearch;
@@ -20,6 +22,7 @@ import static org.opensearch.client.RestClientBuilder.DEFAULT_SOCKET_TIMEOUT_MIL
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -27,7 +30,10 @@ import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.TrustAllStrategy;
 import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.storm.shade.org.apache.commons.lang.StringUtils;
 import org.apache.stormcrawler.util.ConfUtils;
 import org.jetbrains.annotations.NotNull;
@@ -36,6 +42,7 @@ import org.opensearch.action.DocWriteRequest;
 import org.opensearch.action.bulk.BulkProcessor;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
+import org.opensearch.client.HttpAsyncResponseConsumerFactory;
 import org.opensearch.client.Node;
 import org.opensearch.client.RequestOptions;
 import org.opensearch.client.RestClient;
@@ -84,6 +91,14 @@ public final class OpenSearchConnection {
                 ConfUtils.loadListFromConf(
                         Constants.PARAMPREFIX, dottedType, "addresses", stormConf);
 
+        // find ; separated values and tokenise as multiple addresses
+        // e.g. opensearch1:9200; opensearch2:9200
+        if (confighosts.size() == 1) {
+            String input = confighosts.get(0);
+            confighosts.clear();
+            confighosts.addAll(Arrays.asList(input.split(" *; *")));
+        }
+
         for (String host : confighosts) {
             // no port specified? use default one
             int port = 9200;
@@ -123,10 +138,14 @@ public final class OpenSearchConnection {
                 ConfUtils.getString(
                         stormConf, Constants.PARAMPREFIX, dottedType, "proxy.scheme", "http");
 
+        final boolean disableTlsValidation =
+                ConfUtils.getBoolean(
+                        stormConf, Constants.PARAMPREFIX, "", "disable.tls.validation", false);
+
         final boolean needsUser = StringUtils.isNotBlank(user) && StringUtils.isNotBlank(password);
         final boolean needsProxy = StringUtils.isNotBlank(proxyhost) && proxyport != -1;
 
-        if (needsUser || needsProxy) {
+        if (needsUser || needsProxy || disableTlsValidation) {
             builder.setHttpClientConfigCallback(
                     httpClientBuilder -> {
                         if (needsUser) {
@@ -139,6 +158,18 @@ public final class OpenSearchConnection {
                         if (needsProxy) {
                             httpClientBuilder.setProxy(
                                     new HttpHost(proxyhost, proxyport, proxyscheme));
+                        }
+
+                        if (disableTlsValidation) {
+                            try {
+                                final SSLContextBuilder sslContext = new SSLContextBuilder();
+                                sslContext.loadTrustMaterial(null, new TrustAllStrategy());
+                                httpClientBuilder.setSSLContext(sslContext.build());
+                                httpClientBuilder.setSSLHostnameVerifier(
+                                        NoopHostnameVerifier.INSTANCE);
+                            } catch (Exception e) {
+                                throw new RuntimeException("Failed to disable TLS validation", e);
+                            }
                         }
                         return httpClientBuilder;
                     });
@@ -167,7 +198,7 @@ public final class OpenSearchConnection {
                 // for data
                 );
 
-        // TODO check if this has gone somewhere else in ES 7
+        // TODO check if this has gone somewhere else
         // int maxRetryTimeout = ConfUtils.getInt(stormConf, Constants.PARAMPREFIX +
         // boltType +
         // ".max.retry.timeout",
@@ -245,11 +276,23 @@ public final class OpenSearchConnection {
                 ConfUtils.getInt(
                         stormConf, Constants.PARAMPREFIX, dottedType, "concurrentRequests", 1);
 
+        final RequestOptions requestOptions = RequestOptions.DEFAULT;
+        final RequestOptions.Builder requestOptionsBuilder = requestOptions.toBuilder();
+        final int bufferSize =
+                ConfUtils.getInt(
+                        stormConf, Constants.PARAMPREFIX, dottedType, "responseBufferSize", 100);
+
+        requestOptionsBuilder.setHttpAsyncResponseConsumerFactory(
+                new HttpAsyncResponseConsumerFactory.HeapBufferedResponseConsumerFactory(
+                        bufferSize * 1024 * 1024));
+
         final BulkProcessor bulkProcessor =
                 BulkProcessor.builder(
                                 (request, bulkListener) ->
                                         client.bulkAsync(
-                                                request, RequestOptions.DEFAULT, bulkListener),
+                                                request,
+                                                requestOptionsBuilder.build(),
+                                                bulkListener),
                                 listener)
                         .setFlushInterval(flushInterval)
                         .setBulkActions(bulkActions)

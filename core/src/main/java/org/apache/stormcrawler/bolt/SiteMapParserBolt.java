@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.bolt;
@@ -29,15 +31,18 @@ import crawlercommons.sitemaps.extension.Extension;
 import crawlercommons.sitemaps.extension.ExtensionMetadata;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.apache.storm.metric.api.MeanReducer;
 import org.apache.storm.metric.api.ReducedMetric;
 import org.apache.storm.task.OutputCollector;
@@ -54,7 +59,6 @@ import org.apache.stormcrawler.parse.ParseFilters;
 import org.apache.stormcrawler.parse.ParseResult;
 import org.apache.stormcrawler.persistence.DefaultScheduler;
 import org.apache.stormcrawler.persistence.Status;
-import org.apache.stormcrawler.protocol.HttpHeaders;
 import org.apache.stormcrawler.util.ConfUtils;
 import org.slf4j.LoggerFactory;
 
@@ -71,7 +75,7 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
 
     private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(SiteMapParserBolt.class);
 
-    private static final byte[] clue = Namespace.SITEMAP.getBytes();
+    private static final byte[] clue = Namespace.SITEMAP.getBytes(StandardCharsets.UTF_8);
 
     private SiteMapParser parser;
 
@@ -123,6 +127,10 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
             return;
         }
 
+        // mark the current doc as a sitemap
+        // as it won't have the k/v if it is a redirected sitemap
+        metadata.setValue(isSitemapKey, "true");
+
         List<Outlink> outlinks;
         try {
             outlinks = parseSiteMap(url, content, ct, metadata);
@@ -139,10 +147,6 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
             collector.ack(tuple);
             return;
         }
-
-        // mark the current doc as a sitemap
-        // as it won't have the k/v if it is a redirected sitemap
-        metadata.setValue(isSitemapKey, "true");
 
         // apply the parse filters if any to the current document
         ParseResult parse = new ParseResult(outlinks);
@@ -196,16 +200,14 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
             SiteMapIndex smi = (SiteMapIndex) siteMap;
             Collection<AbstractSiteMap> subsitemaps = smi.getSitemaps();
 
-            Calendar rightNow = Calendar.getInstance();
+            Calendar rightNow = Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.ROOT);
             rightNow.add(Calendar.HOUR, -filterHoursSinceModified);
 
             int delay = 0;
 
             // keep the subsitemaps as outlinks
             // they will be fetched and parsed in the following steps
-            Iterator<AbstractSiteMap> iter = subsitemaps.iterator();
-            while (iter.hasNext()) {
-                AbstractSiteMap asm = iter.next();
+            for (AbstractSiteMap asm : subsitemaps) {
                 String target = asm.getUrl().toExternalForm();
 
                 Date lastModified = asm.getLastModified();
@@ -256,10 +258,7 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
             SiteMap sm = (SiteMap) siteMap;
             // TODO see what we can do with the LastModified info
             Collection<SiteMapURL> sitemapURLs = sm.getSiteMapUrls();
-            Iterator<SiteMapURL> iter = sitemapURLs.iterator();
-            while (iter.hasNext()) {
-                SiteMapURL smurl = iter.next();
-
+            for (SiteMapURL smurl : sitemapURLs) {
                 // TODO handle priority in metadata
                 double priority = smurl.getPriority();
                 // TODO convert the frequency into a numerical value and handle
@@ -272,7 +271,8 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
                 if (lastModified != null) {
                     // filter based on the published date
                     if (filterHoursSinceModified != -1) {
-                        Calendar rightNow = Calendar.getInstance();
+                        Calendar rightNow =
+                                Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.ROOT);
                         rightNow.add(Calendar.HOUR, -filterHoursSinceModified);
                         if (lastModified.before(rightNow.getTime())) {
                             LOG.info(
@@ -322,8 +322,7 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
 
                         if (entry.getValue() != null) {
                             metadata.addValues(
-                                    extension.name() + "." + entry.getKey(),
-                                    Arrays.asList(entry.getValue()));
+                                    extension.name() + "." + entry.getKey(), entry.getValue());
                         }
                     }
                 }
@@ -375,5 +374,12 @@ public class SiteMapParserBolt extends StatusEmitterBolt {
         }
         int position = Bytes.indexOf(beginning, clue);
         return position != -1;
+    }
+
+    @Override
+    public void cleanup() {
+        if (parseFilters != null) {
+            parseFilters.cleanup();
+        }
     }
 }

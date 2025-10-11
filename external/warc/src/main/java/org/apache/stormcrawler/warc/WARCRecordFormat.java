@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.warc;
@@ -26,7 +28,6 @@ import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
-import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -35,10 +36,10 @@ import java.util.regex.Pattern;
 import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.apache.storm.hdfs.bolt.format.RecordFormat;
 import org.apache.storm.tuple.Tuple;
 import org.apache.stormcrawler.Metadata;
-import org.apache.stormcrawler.protocol.HttpHeaders;
 import org.apache.stormcrawler.protocol.ProtocolResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,8 @@ public class WARCRecordFormat implements RecordFormat {
     protected static final String WARC_TYPE_RESOURCE = "resource";
 
     protected static final String WARC_TYPE_WARCINFO = "warcinfo";
+
+    protected static final String WARC_TYPE_METADATA = "metadata";
 
     protected static final String WARC_VERSION = "WARC/1.0";
     protected static final String CRLF = "\r\n";
@@ -108,7 +111,7 @@ public class WARCRecordFormat implements RecordFormat {
 
     /** Generates a WARC info entry which can be stored at the beginning of each WARC file. */
     public static byte[] generateWARCInfo(Map<String, String> fields) {
-        StringBuffer buffer = new StringBuffer();
+        StringBuilder buffer = new StringBuilder();
         buffer.append(WARC_VERSION);
         buffer.append(CRLF);
 
@@ -136,9 +139,7 @@ public class WARCRecordFormat implements RecordFormat {
 
         // add WARC fields
         // http://bibnum.bnf.fr/warc/WARC_ISO_28500_version1_latestdraft.pdf
-        Iterator<Entry<String, String>> iter = fields.entrySet().iterator();
-        while (iter.hasNext()) {
-            Entry<String, String> entry = iter.next();
+        for (Entry<String, String> entry : fields.entrySet()) {
             String key = entry.getKey();
             if (key.startsWith("WARC-")) continue;
             fieldsBuffer.append(key).append(": ").append(entry.getValue()).append(CRLF);
@@ -328,21 +329,14 @@ public class WARCRecordFormat implements RecordFormat {
         if (StringUtils.isNotBlank(headersVerbatim)) {
             WARCTypeValue = WARC_TYPE_RESPONSE;
             headersVerbatim = fixHttpHeaders(headersVerbatim, content.length);
-            httpheaders = headersVerbatim.getBytes();
+            httpheaders = headersVerbatim.getBytes(StandardCharsets.UTF_8);
         }
 
         StringBuilder buffer = new StringBuilder();
         buffer.append(WARC_VERSION);
         buffer.append(CRLF);
 
-        String mainID = UUID.randomUUID().toString();
-
-        buffer.append("WARC-Record-ID")
-                .append(": ")
-                .append("<urn:uuid:")
-                .append(mainID)
-                .append(">")
-                .append(CRLF);
+        addRecordID(buffer);
 
         String warcRequestId = metadata.getFirstValue("_request.warc_record_id_");
         if (warcRequestId != null) {
@@ -390,12 +384,10 @@ public class WARCRecordFormat implements RecordFormat {
 
         // must be a valid URI
         try {
-            String normalised = url.replaceAll(" ", "%20");
-            String targetURI = URI.create(normalised).toASCIIString();
-            buffer.append("WARC-Target-URI").append(": ").append(targetURI).append(CRLF);
+            addTargetURI(buffer, url);
         } catch (Exception e) {
             LOG.warn("Incorrect URI: {}", url);
-            return new byte[] {};
+            return new byte[0];
         }
 
         // provide a ContentType if type response
@@ -459,5 +451,20 @@ public class WARCRecordFormat implements RecordFormat {
         bytebuffer.put(CRLF_BYTES);
 
         return bytebuffer.array();
+    }
+
+    static void addTargetURI(StringBuilder builder, String url) {
+        String normalised = url.replace(" ", "%20");
+        String targetURI = URI.create(normalised).toASCIIString();
+        builder.append("WARC-Target-URI").append(": ").append(targetURI).append(CRLF);
+    }
+
+    static void addRecordID(StringBuilder builder) {
+        builder.append("WARC-Record-ID")
+                .append(": ")
+                .append("<urn:uuid:")
+                .append(UUID.randomUUID().toString())
+                .append(">")
+                .append(CRLF);
     }
 }

@@ -1,16 +1,16 @@
 # stormcrawler-aws
 ================================
 
-AWS resources for Storm-Crawler, currently contains an indexer bolt for [CloudSearch](https://aws.amazon.com/cloudsearch/) and another bolt for storing and retrieving web pages to/from [S3](https://aws.amazon.com/s3/).
+AWS resources for StormCrawler, currently contains an indexer bolt for [CloudSearch](https://aws.amazon.com/cloudsearch/) and another bolt for storing and retrieving web pages to/from [S3](https://aws.amazon.com/s3/).
 
 ## Prerequisites
 
-Add storm-crawler-aws to the dependencies of your project\:
+Add stormcrawler-aws to the dependencies of your project\:
 
 ```xml
 <dependency>
     <groupId>org.apache.stormcrawler</groupId>
-    <artifactId>storm-crawler-aws</artifactId>
+    <artifactId>stormcrawler-aws</artifactId>
     <version>XXXX</version>
 </dependency>
 ```
@@ -21,7 +21,7 @@ Edit `~/.aws/credentials`, see [http://docs.aws.amazon.com/cli/latest/userguide/
 
 * How to use?
 
-Add storm-crawler-aws as a Maven dependency, use the class CloudSearchIndexWriter in your Storm topology alongside the core StormCrawler components and create a yaml configuration file (see below).
+Add stormcrawler-aws as a Maven dependency, use the class CloudSearchIndexWriter in your Storm topology alongside the core StormCrawler components and create a yaml configuration file (see below).
 
 * AWS credentials 
 
@@ -37,7 +37,7 @@ Note that the creation of the domain can take some time. Once it is complete, no
 
 See file [aws-conf.yaml] for an example of configuration. 
 
-You'll need to define `cloudsearch.endpoint` and `cloudsearch.region` , unless you set `cloudsearch.batch.dump` to `true` in which case the batch of documents to index in JSON format will be dumped on the default tmp directory. The files have the prefix "CloudSearch_" e.g. `/tmp/CloudSearch_4822180575734804454.json`. These temp filse can be used as templates when defining the fields in the domain creation (see above).
+You'll need to define `cloudsearch.endpoint` and `cloudsearch.region` , unless you set `cloudsearch.batch.dump` to `true` in which case the batch of documents to index in JSON format will be dumped on the default tmp directory. The files have the prefix "CloudSearch_" e.g. `/tmp/CloudSearch_4822180575734804454.json`. These temp files can be used as templates when defining the fields in the domain creation (see above).
 
 There are two additional configurations for CloudSearch \:
 

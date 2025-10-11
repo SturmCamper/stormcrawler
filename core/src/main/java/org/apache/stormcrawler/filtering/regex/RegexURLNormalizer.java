@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.filtering.regex;
@@ -18,6 +20,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -25,7 +28,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -98,10 +100,7 @@ public class RegexURLNormalizer extends URLFilter {
     public @Nullable String filter(
             @Nullable URL sourceUrl, @Nullable Metadata sourceMetadata, @NotNull String urlString) {
 
-        Iterator<Rule> i = rules.iterator();
-        while (i.hasNext()) {
-            Rule r = i.next();
-
+        for (Rule r : rules) {
             Matcher matcher = r.pattern.matcher(urlString);
 
             urlString = matcher.replaceAll(r.substitution);
@@ -234,9 +233,10 @@ public class RegexURLNormalizer extends URLFilter {
      * Utility method to test rules against an input. the first arg is the absolute path of the
      * rules file, the second is the URL to be normalised
      */
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) throws FileNotFoundException, IOException {
         RegexURLNormalizer normalizer = new RegexURLNormalizer();
-        normalizer.rules = normalizer.readConfiguration(new FileReader(args[0]));
+        normalizer.rules =
+                normalizer.readConfiguration(new FileReader(args[0], StandardCharsets.UTF_8));
 
         String output = normalizer.filter(null, null, args[1]);
 

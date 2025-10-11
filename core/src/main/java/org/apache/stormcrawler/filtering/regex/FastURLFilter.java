@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.filtering.regex;
@@ -27,6 +29,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.apache.stormcrawler.JSONResource;
@@ -52,7 +55,7 @@ import org.slf4j.LoggerFactory;
  *    "patterns" : [ "DenyPathQuery \\.jpg" ]
  *  }, {
  *    "scope" : "domain:stormcrawler.net",
- *    "patterns" : [ "AllowPath /digitalpebble/", "DenyPath .+" ]
+ *    "patterns" : [ "AllowPath /stormcrawler/", "DenyPath .+" ]
  *  }, {
  *    "scope" : "metadata:key=value",
  *   "patterns" : [ "DenyPath .+" ]
@@ -109,7 +112,7 @@ public class FastURLFilter extends URLFilter implements JSONResource {
 
         // if it contains a single object
         // jump directly to its content
-        // https://github.com/DigitalPebble/storm-crawler/issues/1013
+        // https://github.com/apache/stormcrawler/issues/1013
         if (rootNode.size() == 1 && rootNode.isObject()) {
             rootNode = rootNode.fields().next().getValue();
         }
@@ -325,10 +328,10 @@ class Rule {
 
     public Rule(String line) {
         int offset = 0;
-        String lcline = line.toLowerCase();
+        String lcline = line.toLowerCase(Locale.ROOT);
         // separate the type from the pattern
         for (Type t : Type.values()) {
-            String start = t.toString().toLowerCase() + " ";
+            String start = t.toString().toLowerCase(Locale.ROOT) + " ";
             if (lcline.startsWith(start)) {
                 type = t;
                 offset = start.length();

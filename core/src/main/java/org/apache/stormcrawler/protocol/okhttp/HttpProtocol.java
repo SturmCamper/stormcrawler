@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.protocol.okhttp;
@@ -19,8 +21,17 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -51,12 +62,12 @@ import okhttp3.brotli.BrotliInterceptor;
 import okio.BufferedSource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.mutable.MutableObject;
+import org.apache.http.HttpHeaders;
 import org.apache.http.cookie.Cookie;
 import org.apache.storm.Config;
 import org.apache.stormcrawler.Constants;
 import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.protocol.AbstractHttpProtocol;
-import org.apache.stormcrawler.protocol.HttpHeaders;
 import org.apache.stormcrawler.protocol.ProtocolResponse;
 import org.apache.stormcrawler.protocol.ProtocolResponse.TrimmedContentReason;
 import org.apache.stormcrawler.proxy.SCProxy;
@@ -178,17 +189,17 @@ public class HttpProtocol extends AbstractHttpProtocol {
 
         final String userAgent = getAgentString(conf);
         if (StringUtils.isNotBlank(userAgent)) {
-            customRequestHeaders.add(new KeyValue("User-Agent", userAgent));
+            customRequestHeaders.add(new KeyValue(HttpHeaders.USER_AGENT, userAgent));
         }
 
         final String accept = ConfUtils.getString(conf, "http.accept");
         if (StringUtils.isNotBlank(accept)) {
-            customRequestHeaders.add(new KeyValue("Accept", accept));
+            customRequestHeaders.add(new KeyValue(HttpHeaders.ACCEPT, accept));
         }
 
         final String acceptLanguage = ConfUtils.getString(conf, "http.accept.language");
         if (StringUtils.isNotBlank(acceptLanguage)) {
-            customRequestHeaders.add(new KeyValue("Accept-Language", acceptLanguage));
+            customRequestHeaders.add(new KeyValue(HttpHeaders.ACCEPT_LANGUAGE, acceptLanguage));
         }
 
         final String basicAuthUser = ConfUtils.getString(conf, "http.basicauth.user", null);
@@ -198,8 +209,10 @@ public class HttpProtocol extends AbstractHttpProtocol {
             final String basicAuthPass = ConfUtils.getString(conf, "http.basicauth.password", "");
             final String encoding =
                     Base64.getEncoder()
-                            .encodeToString((basicAuthUser + ":" + basicAuthPass).getBytes());
-            customRequestHeaders.add(new KeyValue("Authorization", "Basic " + encoding));
+                            .encodeToString(
+                                    (basicAuthUser + ":" + basicAuthPass)
+                                            .getBytes(StandardCharsets.UTF_8));
+            customRequestHeaders.add(new KeyValue(HttpHeaders.AUTHORIZATION, "Basic " + encoding));
         }
 
         customHeaders.forEach(customRequestHeaders::add);
@@ -280,46 +293,50 @@ public class HttpProtocol extends AbstractHttpProtocol {
         // conditionally add a dynamic proxy
         if (proxyManager != null) {
             // retrieve proxy from proxy manager
-            SCProxy prox = proxyManager.getProxy(metadata);
+            Optional<SCProxy> proxOptional = proxyManager.getProxy(metadata);
 
-            // conditionally configure proxy authentication
-            if (StringUtils.isNotBlank(prox.getAddress())) {
-                // format SCProxy into native Java proxy
-                Proxy proxy =
-                        new Proxy(
-                                Proxy.Type.valueOf(prox.getProtocol().toUpperCase()),
-                                new InetSocketAddress(
-                                        prox.getAddress(), Integer.parseInt(prox.getPort())));
+            if (proxOptional.isPresent()) {
+                SCProxy prox = proxOptional.get();
+                // conditionally configure proxy authentication
+                if (StringUtils.isNotBlank(prox.getAddress())) {
+                    // format SCProxy into native Java proxy
+                    Proxy proxy =
+                            new Proxy(
+                                    Proxy.Type.valueOf(prox.getProtocol().toUpperCase(Locale.ROOT)),
+                                    new InetSocketAddress(
+                                            prox.getAddress(), Integer.parseInt(prox.getPort())));
 
-                // set proxy in builder
-                builder.proxy(proxy);
+                    // set proxy in builder
+                    builder.proxy(proxy);
 
-                // conditionally add proxy authentication
-                if (StringUtils.isNotBlank(prox.getUsername())) {
-                    // add proxy authentication header to builder
-                    builder.proxyAuthenticator(
-                            (Route route, Response response) -> {
-                                String credential =
-                                        Credentials.basic(prox.getUsername(), prox.getPassword());
-                                return response.request()
-                                        .newBuilder()
-                                        .header("Proxy-Authorization", credential)
-                                        .build();
-                            });
+                    // conditionally add proxy authentication
+                    if (StringUtils.isNotBlank(prox.getUsername())) {
+                        // add proxy authentication header to builder
+                        builder.proxyAuthenticator(
+                                (Route route, Response response) -> {
+                                    String credential =
+                                            Credentials.basic(
+                                                    prox.getUsername(), prox.getPassword());
+                                    return response.request()
+                                            .newBuilder()
+                                            .header(HttpHeaders.PROXY_AUTHORIZATION, credential)
+                                            .build();
+                                });
+                    }
                 }
+
+                // save start time for debugging speed impact of client build
+                long buildStart = System.currentTimeMillis();
+
+                // create new local client from builder using proxy
+                localClient = builder.build();
+
+                LOG.debug(
+                        "time to build okhttp client with proxy: {}ms",
+                        System.currentTimeMillis() - buildStart);
+
+                LOG.debug("fetching with proxy {} - {} ", url, prox.toString());
             }
-
-            // save start time for debugging speed impact of client build
-            long buildStart = System.currentTimeMillis();
-
-            // create new local client from builder using proxy
-            localClient = builder.build();
-
-            LOG.debug(
-                    "time to build okhttp client with proxy: {}ms",
-                    System.currentTimeMillis() - buildStart);
-
-            LOG.debug("fetching with proxy {} - {} ", url, prox.toString());
         }
 
         final Builder rb = new Request.Builder().url(url);
@@ -335,22 +352,22 @@ public class HttpProtocol extends AbstractHttpProtocol {
 
             final String lastModified = metadata.getFirstValue(HttpHeaders.LAST_MODIFIED);
             if (StringUtils.isNotBlank(lastModified)) {
-                rb.header("If-Modified-Since", HttpHeaders.formatHttpDate(lastModified));
+                rb.header(HttpHeaders.IF_MODIFIED_SINCE, formatHttpDate(lastModified));
             }
 
-            final String ifNoneMatch = metadata.getFirstValue("etag", protocolMDprefix);
+            final String ifNoneMatch = metadata.getFirstValue(HttpHeaders.ETAG, protocolMDprefix);
             if (StringUtils.isNotBlank(ifNoneMatch)) {
-                rb.header("If-None-Match", ifNoneMatch);
+                rb.header(HttpHeaders.IF_NONE_MATCH, ifNoneMatch);
             }
 
             final String accept = metadata.getFirstValue("http.accept");
             if (StringUtils.isNotBlank(accept)) {
-                rb.header("Accept", accept);
+                rb.header(HttpHeaders.ACCEPT, accept);
             }
 
             final String acceptLanguage = metadata.getFirstValue("http.accept.language");
             if (StringUtils.isNotBlank(acceptLanguage)) {
-                rb.header("Accept-Language", acceptLanguage);
+                rb.header(HttpHeaders.ACCEPT_LANGUAGE, acceptLanguage);
             }
 
             final String pageMaxContentStr = metadata.getFirstValue("http.content.limit");
@@ -393,7 +410,9 @@ public class HttpProtocol extends AbstractHttpProtocol {
 
                 if (key.equals(ProtocolResponse.REQUEST_HEADERS_KEY)
                         || key.equals(ProtocolResponse.RESPONSE_HEADERS_KEY)) {
-                    value = new String(Base64.getDecoder().decode(value));
+                    value =
+                            new String(
+                                    Base64.getDecoder().decode(value), StandardCharsets.ISO_8859_1);
                 }
 
                 responsemetadata.addValue(key.toLowerCase(Locale.ROOT), value);
@@ -567,10 +586,18 @@ public class HttpProtocol extends AbstractHttpProtocol {
             responseverbatim.append("\r\n");
 
             final byte[] encodedBytesResponse =
-                    Base64.getEncoder().encode(responseverbatim.toString().getBytes());
+                    Base64.getEncoder()
+                            .encode(
+                                    responseverbatim
+                                            .toString()
+                                            .getBytes(StandardCharsets.ISO_8859_1));
 
             final byte[] encodedBytesRequest =
-                    Base64.getEncoder().encode(requestverbatim.toString().getBytes());
+                    Base64.getEncoder()
+                            .encode(
+                                    requestverbatim
+                                            .toString()
+                                            .getBytes(StandardCharsets.ISO_8859_1));
 
             final StringBuilder protocols = new StringBuilder(response.protocol().toString());
             final Handshake handshake = connection.handshake();
@@ -581,8 +608,12 @@ public class HttpProtocol extends AbstractHttpProtocol {
 
             // returns a modified version of the response
             return response.newBuilder()
-                    .header(ProtocolResponse.REQUEST_HEADERS_KEY, new String(encodedBytesRequest))
-                    .header(ProtocolResponse.RESPONSE_HEADERS_KEY, new String(encodedBytesResponse))
+                    .header(
+                            ProtocolResponse.REQUEST_HEADERS_KEY,
+                            new String(encodedBytesRequest, StandardCharsets.ISO_8859_1))
+                    .header(
+                            ProtocolResponse.RESPONSE_HEADERS_KEY,
+                            new String(encodedBytesResponse, StandardCharsets.ISO_8859_1))
                     .header(ProtocolResponse.RESPONSE_IP_KEY, ipAddress)
                     .header(ProtocolResponse.REQUEST_TIME_KEY, Long.toString(startFetchTime))
                     .header(ProtocolResponse.PROTOCOL_VERSIONS_KEY, protocols.toString())

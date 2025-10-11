@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.warc;
@@ -17,10 +19,8 @@ package org.apache.stormcrawler.warc;
 import static org.apache.stormcrawler.protocol.ProtocolResponse.REQUEST_HEADERS_KEY;
 import static org.apache.stormcrawler.protocol.ProtocolResponse.RESPONSE_IP_KEY;
 
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 import java.util.regex.Pattern;
 import org.apache.commons.lang.StringUtils;
 import org.apache.storm.tuple.Tuple;
@@ -56,7 +56,7 @@ public class WARCRequestRecordFormat extends WARCRecordFormat {
             LOG.warn("No request header for {}", url);
             return new byte[] {};
         }
-        final byte[] httpheaders = fixHttpHeaders(headersVerbatim).getBytes();
+        final byte[] httpheaders = fixHttpHeaders(headersVerbatim).getBytes(StandardCharsets.UTF_8);
 
         StringBuilder buffer = new StringBuilder();
         buffer.append(WARC_VERSION);
@@ -69,16 +69,12 @@ public class WARCRequestRecordFormat extends WARCRecordFormat {
             buffer.append("WARC-IP-Address: ").append(IP).append(CRLF);
         }
 
-        String mainID = UUID.randomUUID().toString();
-        buffer.append("WARC-Record-ID: ")
-                .append("<urn:uuid:")
-                .append(mainID)
-                .append(">")
-                .append(CRLF);
+        addRecordID(buffer);
+
         /*
          * The request record ID is stored in the metadata so that a WARC
          * response record can later refer to it. Deactivated because of
-         * https://github.com/DigitalPebble/storm-crawler/issues/721
+         * https://github.com/apache/stormcrawler/issues/721
          */
         // metadata.setValue("_request.warc_record_id_", mainID);
 
@@ -92,12 +88,10 @@ public class WARCRequestRecordFormat extends WARCRecordFormat {
 
         // must be a valid URI
         try {
-            String normalised = url.replaceAll(" ", "%20");
-            String targetURI = URI.create(normalised).toASCIIString();
-            buffer.append("WARC-Target-URI: ").append(targetURI).append(CRLF);
+            addTargetURI(buffer, url);
         } catch (Exception e) {
             LOG.warn("Incorrect URI: {}", url);
-            return new byte[] {};
+            return new byte[0];
         }
 
         buffer.append("Content-Type: application/http; msgtype=request").append(CRLF);

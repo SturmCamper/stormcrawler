@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.solr.metrics;
@@ -18,7 +20,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.solr.common.SolrInputDocument;
@@ -34,7 +36,7 @@ public class MetricsConsumer implements IMetricsConsumer {
 
     private final Logger LOG = LoggerFactory.getLogger(MetricsConsumer.class);
 
-    private final DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    private final DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT);
 
     private static final String BOLT_TYPE = "metrics";
 
@@ -48,7 +50,7 @@ public class MetricsConsumer implements IMetricsConsumer {
 
     @Override
     public void prepare(
-            Map stormConf,
+            Map<String, Object> stormConf,
             Object registrationArgument,
             TopologyContext topologyContext,
             IErrorReporter errorReporter) {
@@ -77,14 +79,12 @@ public class MetricsConsumer implements IMetricsConsumer {
         if (value instanceof Number) {
             indexDataPoint(taskInfo, now, nameprefix, ((Number) value).doubleValue());
         } else if (value instanceof Map) {
-            Iterator<Entry> keyValiter = ((Map) value).entrySet().iterator();
-            while (keyValiter.hasNext()) {
-                Entry entry = keyValiter.next();
+            for (Entry<String, Object> entry : ((Map<String, Object>) value).entrySet()) {
                 String newnameprefix = nameprefix + "." + entry.getKey();
                 handleDataPoints(taskInfo, newnameprefix, entry.getValue(), now);
             }
         } else if (value instanceof Collection) {
-            for (Object collectionObj : (Collection) value) {
+            for (Object collectionObj : (Collection<Object>) value) {
                 handleDataPoints(taskInfo, nameprefix, collectionObj, now);
             }
         } else {
@@ -110,7 +110,7 @@ public class MetricsConsumer implements IMetricsConsumer {
                 doc.addField(ttlField, ttl);
             }
 
-            connection.getClient().add(doc);
+            connection.addAsync(doc);
         } catch (Exception e) {
             LOG.error("Problem building a document to Solr", e);
         }

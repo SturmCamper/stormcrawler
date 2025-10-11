@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.opensearch.persistence;
@@ -21,8 +23,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.StringUtils;
 import org.apache.storm.spout.SpoutOutputCollector;
@@ -55,10 +59,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Spout which pulls URL from an ES index. Use a single instance unless you use 'es.status.routing'
- * with the StatusUpdaterBolt, in which case you need to have exactly the same number of spout
- * instances as ES shards. Guarantees a good mix of URLs by aggregating them by an arbitrary field
- * e.g. key.
+ * Spout which pulls URL from an OpenSearch index. Use a single instance unless you use
+ * 'opensearch.status.routing' with the StatusUpdaterBolt, in which case you need to have exactly
+ * the same number of spout instances as OpenSearch shards. Guarantees a good mix of URLs by
+ * aggregating them by an arbitrary field e.g. key.
  */
 public class AggregationSpout extends AbstractSpout implements ActionListener<SearchResponse> {
 
@@ -303,16 +307,17 @@ public class AggregationSpout extends AbstractSpout implements ActionListener<Se
         // returned in the query and add to it, unless the previous value is
         // within n mins in which case we'll keep it
         if (mostRecentDateFound != null && recentDateIncrease >= 0) {
-            Calendar potentialNewDate = Calendar.getInstance();
+            Calendar potentialNewDate =
+                    Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.ROOT);
             potentialNewDate.setTimeInMillis(mostRecentDateFound.toEpochMilli());
             potentialNewDate.add(Calendar.MINUTE, recentDateIncrease);
             Date oldDate = null;
             // check boundaries
             if (this.recentDateMinGap > 0) {
-                Calendar low = Calendar.getInstance();
+                Calendar low = Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.ROOT);
                 low.setTime(queryDate);
                 low.add(Calendar.MINUTE, -recentDateMinGap);
-                Calendar high = Calendar.getInstance();
+                Calendar high = Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.ROOT);
                 high.setTime(queryDate);
                 high.add(Calendar.MINUTE, recentDateMinGap);
                 if (high.before(potentialNewDate) || low.after(potentialNewDate)) {

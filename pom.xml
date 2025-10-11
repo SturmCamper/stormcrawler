@@ -1,16 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
+	<parent>
+		<groupId>org.apache</groupId>
+		<artifactId>apache</artifactId>
+		<version>35</version>
+	</parent>
+
 	<groupId>org.apache.stormcrawler</groupId>
-	<artifactId>storm-crawler</artifactId>
-	<version>2.12-SNAPSHOT</version>
+	<artifactId>stormcrawler</artifactId>
+	<version>3.5.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
-	<name>storm-crawler</name>
+	<name>stormcrawler</name>
 	<description>A collection of resources for building low-latency, scalable
 		web crawlers on Apache Storm.</description>
-	<url>http://stormcrawler.net/</url>
+	<url>https://github.com/apache/stormcrawler</url>
 
 	<licenses>
 		<license>
@@ -19,79 +45,55 @@
 		</license>
 	</licenses>
 
-	<developers>
-		<developer>
-			<name>Julien Nioche</name>
-			<email>julien@digitalpebble.com</email>
-			<organization>DigitalPebble</organization>
-			<organizationUrl>http://www.digitalpebble.com</organizationUrl>
-		</developer>
-				<developer>
-			<name>Sebastian Nagel</name>
-			<email>sebastian@commoncrawl.org</email>
-			<organization>CommonCrawl</organization>
-			<organizationUrl>http://commoncrawl.org</organizationUrl>
-		</developer>
-		<developer>
-			<name>Jorge Luis Betancourt</name>
-			<email>betancourt.jorge@gmail.com</email>
-			<organization>trivago</organization>
-			<organizationUrl>https://www.trivago.com</organizationUrl>
-		</developer>
-		<developer>
-			<name>Richard Zowalla</name>
-			<email>richard.zowalla@hs-heilbronn.de</email>
-			<organization>Heilbronn University</organization>
-			<organizationUrl>https://www.mi.hs-heilbronn.de</organizationUrl>
-		</developer>
-		<developer>
-			<name>Michael Dinzinger</name>
-			<email>michael.dinzinger@uni-passau.de</email>
-			<organization>Universität Passau</organization>
-			<organizationUrl>https://www.fim.uni-passau.de</organizationUrl>
-		</developer>
-	</developers>
-
 	<scm>
-		<connection>scm:git:https://github.com/apache/incubator-stormcrawler.git</connection>
+		<connection>scm:git:https://github.com/apache/stormcrawler.git</connection>
 		<developerConnection>
-			scm:git:git@github.com:apache/incubator-stormcrawler.git</developerConnection>
-		<url>https://github.com/apache/incubator-stormcrawler</url>
-		<tag>HEAD</tag>
+			scm:git:git@github.com:apache/stormcrawler.git</developerConnection>
+		<url>https://github.com/apache/stormcrawler</url>
+		<tag>stormcrawler-3.5.0</tag>
 	</scm>
 
 	<issueManagement>
 		<system>GitHub Issues</system>
-		<url>https://github.com/apache/incubator-stormcrawler/issues</url>
+		<url>https://github.com/apache/stormcrawler/issues</url>
 	</issueManagement>
 
 	<properties>
+		<!-- timestamp for reproducible outputs, updated on release by the release plugin -->
+		<project.build.outputTimestamp>2025-09-16T17:50:07Z</project.build.outputTimestamp>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<additionalparam>-Xdoclint:none</additionalparam>
 		<!-- dependency versions -->
-		<junit.version>4.13.2</junit.version>
-		<storm-client.version>2.6.1</storm-client.version>
-		<jackson.version>2.15.2</jackson.version>
-		<tika.version>2.9.1</tika.version>
-		<mockito.version>5.10.0</mockito.version>
-		<jetbrains.annotations.version>24.1.0</jetbrains.annotations.version>
-		<log4j2.version>2.23.0</log4j2.version>
-		<git-code-format-maven-plugin.version>5.3</git-code-format-maven-plugin.version>
-		<testcontainers.version>1.19.7</testcontainers.version>
-		<maven.mojo.license.plugin>2.4.0</maven.mojo.license.plugin>
-		<jacoco.maven.plugin>0.8.11</jacoco.maven.plugin>
-	</properties>
+		<junit.version>6.0.0</junit.version>
+		<storm-client.version>2.8.2</storm-client.version>
+		<!-- Jackson's version should be in-line with the one in Storm -->
+		<jackson.version>2.18.1</jackson.version>
+		<tika.version>3.2.3</tika.version>
+		<mockito.version>5.20.0</mockito.version>
+		<slf4j-simple.version>2.0.17</slf4j-simple.version>
+		<jetbrains.annotations.version>26.0.2-1</jetbrains.annotations.version>
+		<commons.io.version>2.17.0</commons.io.version>
+        <commons.compress.version>1.28.0</commons.compress.version>
+        <commons.codec.version>1.19.0</commons.codec.version>
+		<git-code-format-maven-plugin.version>5.4</git-code-format-maven-plugin.version>
+		<testcontainers.version>1.21.3</testcontainers.version>
+		<maven.mojo.license.plugin>2.7.0</maven.mojo.license.plugin>
+		<jacoco.maven.plugin>0.8.13</jacoco.maven.plugin>
+		<jacoco.haltOnFailure>false</jacoco.haltOnFailure>
+		<jacoco.classRatio>1.00</jacoco.classRatio>
+		<jacoco.instructionRatio>1.00</jacoco.instructionRatio>
+		<jacoco.methodRatio>1.00</jacoco.methodRatio>
+		<jacoco.branchRatio>1.00</jacoco.branchRatio>
+		<jacoco.lineRatio>1.00</jacoco.lineRatio>
+		<jacoco.complexityRatio>1.00</jacoco.complexityRatio>
 
-	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
-		<repository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-		</repository>
-	</distributionManagement>
+		<skip.format.code>true</skip.format.code>
+
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
+
+		<apache-jar-resource-bundle.version>1.7</apache-jar-resource-bundle.version>
+	</properties>
 
 	<build>
 		<pluginManagement>
@@ -99,7 +101,7 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
-					<version>3.2.1</version>
+					<version>3.5.4</version>
 					<configuration>
 						<argLine>${argLine}</argLine>
 					</configuration>
@@ -107,27 +109,41 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
-					<version>3.11.0</version>
+					<version>3.14.1</version>
 					<configuration>
-						<source>11</source>
-						<target>11</target>
+						<source>17</source>
+						<target>17</target>
+						<release>17</release>
 					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-javadoc-plugin</artifactId>
+					<version>3.12.0</version>
+					<configuration>
+						<doclint>none</doclint>
+						<source>17</source>
+						<sourcepath>src/main/java</sourcepath>
+					</configuration>
+					<executions>
+						<execution>
+							<id>create-javadoc-jar</id>
+							<goals>
+								<goal>jar</goal>
+							</goals>
+							<phase>package</phase>
+							<configuration>
+								<show>public</show>
+								<quiet>false</quiet>
+								<use>false</use> <!-- Speeds up the build of the javadocs -->
+							</configuration>
+						</execution>
+					</executions>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-jar-plugin</artifactId>
-					<version>3.3.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-release-plugin</artifactId>
-					<version>3.0.1</version>
-					<configuration>
-						<autoVersionSubmodules>true</autoVersionSubmodules>
-						<useReleaseProfile>false</useReleaseProfile>
-						<releaseProfiles>release</releaseProfiles>
-						<goals>deploy</goals>
-					</configuration>
+					<version>3.4.2</version>
 				</plugin>
 				<plugin>
 					<groupId>org.codehaus.mojo</groupId>
@@ -247,6 +263,23 @@
 		</pluginManagement>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-remote-resources-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>process-resource-bundles</id>
+						<configuration>
+							<properties>
+								<projectName>Apache StormCrawler</projectName>
+							</properties>
+							<resourceBundles>
+								<resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:${apache-jar-resource-bundle.version}</resourceBundle>
+							</resourceBundles>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>${jacoco.maven.plugin}</version>
@@ -263,6 +296,52 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+					</execution>
+					<execution>
+						<id>check</id>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>CLASS</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${jacoco.classRatio}</minimum>
+										</limit>
+										<limit>
+											<counter>INSTRUCTION</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${jacoco.instructionRatio}</minimum>
+										</limit>
+										<limit>
+											<counter>METHOD</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${jacoco.methodRatio}</minimum>
+										</limit>
+										<limit>
+											<counter>BRANCH</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${jacoco.branchRatio}</minimum>
+										</limit>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${jacoco.lineRatio}</minimum>
+										</limit>
+										<limit>
+											<counter>COMPLEXITY</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${jacoco.complexityRatio}</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+							<haltOnFailure>${jacoco.haltOnFailure}</haltOnFailure>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
@@ -297,6 +376,7 @@
 					</dependency>
 				</dependencies>
 				<configuration>
+					<skip>${skip.format.code}</skip>
 					<formatterOptions>
 						<googleJavaFormat.aosp>true</googleJavaFormat.aosp>
 						<googleJavaFormat.fixImportsOnly>false</googleJavaFormat.fixImportsOnly>
@@ -308,7 +388,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-enforcer-plugin</artifactId>
-				<version>3.4.1</version>
+				<version>3.6.2</version>
 				<executions>
 					<execution>
 						<id>enforce-maven</id>
@@ -333,13 +413,38 @@
 							<rules>
 								<bannedDependencies>
 									<excludes>
-										<exclude>
-											org.apache.logging.log4j:log4j-core:(,2.17.0)</exclude>
+										<exclude>org.apache.logging.log4j:log4j-core:(,2.17.0)</exclude>
 									</excludes>
 								</bannedDependencies>
 							</rules>
 							<fail>true</fail>
 						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>de.thetaphi</groupId>
+				<artifactId>forbiddenapis</artifactId>
+				<version>3.10</version>
+				<configuration>
+					<targetVersion>17</targetVersion>
+					<ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
+					<failOnUnsupportedJava>false</failOnUnsupportedJava>
+					<excludes>test-documents/*.class</excludes>
+					<bundledSignatures>
+						<bundledSignature>jdk-unsafe</bundledSignature>
+						<bundledSignature>jdk-deprecated</bundledSignature>
+						<bundledSignature>jdk-non-portable</bundledSignature>
+						<bundledSignature>jdk-internal</bundledSignature>
+						<bundledSignature>commons-io-unsafe-${commons.io.version}</bundledSignature>
+					</bundledSignatures>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>check</goal>
+							<goal>testCheck</goal>
+						</goals>
 					</execution>
 				</executions>
 			</plugin>
@@ -364,68 +469,81 @@
 	</build>
 
 	<profiles>
+		<!-- Run Apache Rat license checks in a separate profile, because during local builds it doesn't skip files
+          that are not checked into Git -->
 		<profile>
-			<id>release</id>
+			<id>rat</id>
 			<build>
-				<pluginManagement>
-					<plugins>
-						<plugin>
-							<groupId>org.apache.maven.plugins</groupId>
-							<artifactId>maven-source-plugin</artifactId>
-							<version>3.3.0</version>
-							<executions>
-								<execution>
-									<id>attach-sources</id>
-									<goals>
-										<goal>jar-no-fork</goal>
-									</goals>
-								</execution>
-							</executions>
-						</plugin>
-
-						<plugin>
-							<groupId>org.apache.maven.plugins</groupId>
-							<artifactId>maven-jar-plugin</artifactId>
-							<version>3.3.0</version>
-							<executions>
-								<execution>
-									<id>attach-test</id>
-									<goals>
-										<goal>test-jar</goal>
-									</goals>
-								</execution>
-							</executions>
-						</plugin>
-
-						<plugin>
-							<groupId>org.apache.maven.plugins</groupId>
-							<artifactId>maven-javadoc-plugin</artifactId>
-							<version>3.6.0</version>
-							<executions>
-								<execution>
-									<id>attach-javadocs</id>
-									<goals>
-										<goal>jar</goal>
-									</goals>
-								</execution>
-							</executions>
-						</plugin>
-
-					</plugins>
-				</pluginManagement>
-
+				<plugins>
+					<plugin>
+						<groupId>org.apache.rat</groupId>
+						<artifactId>apache-rat-plugin</artifactId>
+						<version>0.16.1</version>
+						<executions>
+							<execution>
+								<phase>verify</phase>
+								<goals>
+									<goal>check</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<outputDirectory>${project.basedir}/rat</outputDirectory>
+							<excludes>
+								<exclude>**/*.ndjson</exclude>
+                                <exclude>**/*.mapping</exclude>
+                                <exclude>**/*.flux</exclude>
+                                <exclude>**/*.txt</exclude>
+                                <exclude>**/*.rss</exclude>
+                                <exclude>**/*.tar.gz</exclude>
+                                <exclude>**/README.md</exclude>
+                                <exclude>**/target/**</exclude>
+                                <exclude>**/warc.inputs</exclude>
+                                <exclude>**/llm-default-prompt.txt</exclude>
+                                <exclude>LICENSE</exclude>
+                                <exclude>NOTICE</exclude>
+                                <exclude>CONTRIBUTING.md</exclude>
+                                <exclude>RELEASING.md</exclude>
+								<exclude>external/opensearch/dashboards/**</exclude>
+								<exclude>external/solr/archetype/src/main/resources/archetype-resources/configsets/**</exclude>
+                                <exclude>THIRD-PARTY.properties</exclude>
+                                <exclude>THIRD-PARTY.txt</exclude>
+								<exclude>.github/ISSUE_TEMPLATE/*.yml</exclude>
+                                <exclude>.github/*.md</exclude>
+                                <exclude>.mvn/*.config</exclude>
+                                <exclude>.gitattributes</exclude>
+                                <exclude>**/dependency-reduced-pom.xml</exclude>
+                                <exclude>.editorconfig</exclude>
+                                <exclude>**/.settings/**/*</exclude> <!-- Eclipse -->
+                                <exclude>**/.classpath</exclude> <!-- Eclipse -->
+                                <exclude>**/.project</exclude> <!-- Eclipse -->
+                                <exclude>**/.idea</exclude> <!-- IntelliJ -->
+							</excludes>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>apache-release</id>
+			<build>
 				<plugins>
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-gpg-plugin</artifactId>
-						<version>3.1.0</version>
+						<artifactId>maven-assembly-plugin</artifactId>
 						<executions>
 							<execution>
-								<id>sign-artifacts</id>
-								<phase>verify</phase>
+								<id>source-release-assembly</id>
+								<phase>package</phase>
 								<goals>
-									<goal>sign</goal>
+									<goal>single</goal>
 								</goals>
+								<configuration>
+									<finalName>apache-stormcrawler-${project.version}</finalName>
+									<descriptors>
+										<descriptor>assembly.xml</descriptor>
+									</descriptors>
+								</configuration>
 							</execution>
 						</executions>
 					</plugin>
@@ -437,9 +555,30 @@
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
-				<groupId>junit</groupId>
-				<artifactId>junit</artifactId>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter-api</artifactId>
 				<version>${junit.version}</version>
+				<scope>test</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter</artifactId>
+				<version>${junit.version}</version>
+				<scope>test</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.testcontainers</groupId>
+				<artifactId>junit-jupiter</artifactId>
+				<version>${testcontainers.version}</version>
+				<scope>test</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-simple</artifactId>
+				<version>${slf4j-simple.version}</version>
 				<scope>test</scope>
 			</dependency>
 
@@ -449,6 +588,18 @@
 				<version>${storm-client.version}</version>
 				<!-- keep storm out of the jar-with-dependencies -->
 				<scope>provided</scope>
+				<exclusions>
+					<!-- Exclude Log4j SLF4J implementation to avoid conflicts with slf4j-simple in tests -->
+					<exclusion>
+						<groupId>org.apache.logging.log4j</groupId>
+						<artifactId>log4j-slf4j2-impl</artifactId>
+					</exclusion>
+					<!-- Exclude Log4j over SLF4J bridge as we use slf4j-simple for tests -->
+					<exclusion>
+						<groupId>org.slf4j</groupId>
+						<artifactId>log4j-over-slf4j</artifactId>
+					</exclusion>
+				</exclusions>
 			</dependency>
 
 			<dependency>
@@ -460,6 +611,12 @@
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-annotations</artifactId>
+				<version>${jackson.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-core</artifactId>
 				<version>${jackson.version}</version>
 			</dependency>
 
@@ -479,29 +636,38 @@
 				<scope>import</scope>
 			</dependency>
 
-            <!-- Necessary until https://github.com/apache/storm/pull/3626 -->
-			<dependency>
-				<groupId>commons-io</groupId>
-				<artifactId>commons-io</artifactId>
-				<version>2.11.0</version>
-			</dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>${commons.compress.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>${commons.codec.version}</version>
+            </dependency>
+
 		</dependencies>
 	</dependencyManagement>
 
 	<modules>
 		<module>core</module>
 		<module>external</module>
+		<module>external/ai</module>
 		<module>external/aws</module>
-		<module>external/elasticsearch</module>
 		<module>external/langid</module>
 		<module>external/opensearch</module>
+		<module>external/playwright</module>
+		<module>external/selenium</module>
 		<module>external/solr</module>
 		<module>external/sql</module>
 		<module>external/tika</module>
 		<module>external/urlfrontier</module>
 		<module>external/warc</module>
 		<module>archetype</module>
-		<module>external/elasticsearch/archetype</module>
 		<module>external/opensearch/archetype</module>
-	</modules>
+		<module>external/solr/archetype</module>
+    </modules>
+
 </project>

@@ -1,20 +1,30 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.urlfrontier;
 
-import static org.apache.stormcrawler.urlfrontier.Constants.*;
+import static org.apache.stormcrawler.urlfrontier.Constants.URLFRONTIER_ADDRESS_KEY;
+import static org.apache.stormcrawler.urlfrontier.Constants.URLFRONTIER_CRAWL_ID_KEY;
+import static org.apache.stormcrawler.urlfrontier.Constants.URLFRONTIER_DEFAULT_HOST;
+import static org.apache.stormcrawler.urlfrontier.Constants.URLFRONTIER_DEFAULT_PORT;
+import static org.apache.stormcrawler.urlfrontier.Constants.URLFRONTIER_DELAY_REQUESTABLE_KEY;
+import static org.apache.stormcrawler.urlfrontier.Constants.URLFRONTIER_HOST_KEY;
+import static org.apache.stormcrawler.urlfrontier.Constants.URLFRONTIER_MAX_BUCKETS_KEY;
+import static org.apache.stormcrawler.urlfrontier.Constants.URLFRONTIER_MAX_URLS_PER_BUCKET_KEY;
+import static org.apache.stormcrawler.urlfrontier.Constants.URLFRONTIER_PORT_KEY;
 
 import crawlercommons.urlfrontier.URLFrontierGrpc;
 import crawlercommons.urlfrontier.URLFrontierGrpc.URLFrontierStub;
@@ -48,6 +58,9 @@ public class Spout extends AbstractQueryingSpout {
     private int maxBucketNum;
 
     private int delayRequestable;
+
+    /** Globally set crawlID * */
+    private String globalCrawlID = null;
 
     @Override
     public void open(
@@ -112,6 +125,14 @@ public class Spout extends AbstractQueryingSpout {
 
         frontier = URLFrontierGrpc.newStub(channel).withWaitForReady();
         LOG.debug("State of Channel: {}", channel.getState(false));
+
+        globalCrawlID = ConfUtils.getString(stormConf, URLFRONTIER_CRAWL_ID_KEY);
+
+        if (globalCrawlID != null) {
+            LOG.info("Initialized URLFrontier Spout for crawlId {}", globalCrawlID);
+        } else {
+            LOG.info("Initialized URLFrontier Spout without crawlId");
+        }
     }
 
     @Override
@@ -122,12 +143,17 @@ public class Spout extends AbstractQueryingSpout {
                 maxBucketNum,
                 maxURLsPerBucket);
 
-        GetParams request =
+        GetParams.Builder builder =
                 GetParams.newBuilder()
                         .setMaxUrlsPerQueue(maxURLsPerBucket)
-                        .setMaxQueues(maxBucketNum)
                         .setDelayRequestable(delayRequestable)
-                        .build();
+                        .setMaxQueues(maxBucketNum);
+
+        if (globalCrawlID != null) {
+            builder.setCrawlID(globalCrawlID);
+        }
+
+        GetParams request = builder.build();
 
         final AtomicInteger counter = new AtomicInteger();
         final long start = System.currentTimeMillis();

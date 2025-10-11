@@ -1,21 +1,23 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.warc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -36,28 +38,30 @@ import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.TestOutputCollector;
 import org.apache.stormcrawler.TestUtil;
 import org.apache.stormcrawler.protocol.ProtocolResponse;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.netpreserve.jwarc.MessageVersion;
 import org.netpreserve.jwarc.WarcReader;
 import org.netpreserve.jwarc.WarcRecord;
 import org.netpreserve.jwarc.WarcRequest;
 import org.netpreserve.jwarc.WarcResponse;
 
-public class WARCHdfsBoltTest {
+class WARCHdfsBoltTest {
 
     private String protocolMDprefix = "protocol.";
+
     private Path warcDir = Path.of("target", "warc");
 
     private TestOutputCollector output;
+
     private HdfsBolt bolt;
+
     private Map<String, Object> conf;
 
-    @Before
-    public void setup() throws IOException {
+    @BeforeEach
+    void setup() throws IOException {
         output = new TestOutputCollector();
-
         // create directory for WARC files and cleanup
         Files.createDirectories(warcDir);
         Files.walk(warcDir)
@@ -68,38 +72,31 @@ public class WARCHdfsBoltTest {
                             } catch (IOException e) {
                             }
                         });
-
         bolt = makeBolt();
-
         // configure RawLocalFileSystem so that WARC files are immediately flushed
         bolt.withConfigKey("warc");
         Map<String, Object> hdfsConf = new HashMap<>();
         hdfsConf.put("fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem");
-        conf = new HashMap<String, Object>();
+        conf = new HashMap<>();
         conf.put("warc", hdfsConf);
-
         conf.put(ProtocolResponse.PROTOCOL_MD_PREFIX_PARAM, protocolMDprefix);
-
         bolt.prepare(conf, TestUtil.getMockedTopologyContext(), new OutputCollector(output));
     }
 
-    @After
-    public void cleanup() {
+    @AfterEach
+    void cleanup() {
         bolt.cleanup();
         output = null;
     }
 
     @Test
-    public void test() throws IOException {
+    void test() throws IOException {
         // write page into WARC file
         bolt.execute(getPage());
-
         // ensure the WARC file is written
         bolt.cleanup();
-
         // read WARC file
         List<WarcRecord> records = readWARCs(warcDir).collect(Collectors.toList());
-
         // expected 3 records (warcinfo, request, response)
         assertEquals(3, records.size());
         assertEquals("warcinfo", records.get(0).type());
@@ -108,19 +105,18 @@ public class WARCHdfsBoltTest {
         WarcResponse response = (WarcResponse) records.get(2);
         assertEquals(MessageVersion.HTTP_1_1, response.http().version());
         assertTrue(
-                "WARC response record is expected to include WARC header \"WARC-Protocol\"",
-                response.headers().first("WARC-Protocol").isPresent());
+                response.headers().first("WARC-Protocol").isPresent(),
+                "WARC response record is expected to include WARC header \"WARC-Protocol\"");
         assertTrue(
-                "WARC response record is expected to include WARC header \"WARC-IP-Address\"",
-                response.headers().first("WARC-IP-Address").isPresent());
+                response.headers().first("WARC-IP-Address").isPresent(),
+                "WARC response record is expected to include WARC header \"WARC-IP-Address\"");
     }
 
     @Test
-    public void testHttp2() throws IOException {
+    void testHttp2() throws IOException {
         bolt.execute(getPage("HTTP/2"));
         bolt.cleanup();
         List<WarcRecord> records = readWARCs(warcDir).collect(Collectors.toList());
-
         // expected 3 records (warcinfo, request, response)
         assertEquals(3, records.size());
         assertEquals("warcinfo", records.get(0).type());
@@ -131,11 +127,11 @@ public class WARCHdfsBoltTest {
         WarcResponse response = (WarcResponse) records.get(2);
         assertEquals(MessageVersion.HTTP_1_1, response.http().version());
         assertTrue(
-                "WARC response record is expected to include WARC header \"WARC-Protocol\"",
-                response.headers().first("WARC-Protocol").isPresent());
+                response.headers().first("WARC-Protocol").isPresent(),
+                "WARC response record is expected to include WARC header \"WARC-Protocol\"");
         assertTrue(
-                "WARC response record is expected to include WARC header \"WARC-IP-Address\"",
-                response.headers().first("WARC-IP-Address").isPresent());
+                response.headers().first("WARC-IP-Address").isPresent(),
+                "WARC response record is expected to include WARC header \"WARC-IP-Address\"");
     }
 
     private static Stream<WarcRecord> readWARCs(Path warcDir) {
@@ -189,24 +185,34 @@ public class WARCHdfsBoltTest {
         String txt = "abcdef";
         byte[] content = txt.getBytes(StandardCharsets.UTF_8);
         Metadata metadata = new Metadata();
-        metadata.addValue(
-                protocolMDprefix + ProtocolResponse.REQUEST_HEADERS_KEY, //
+        metadata.addValue( //
+                protocolMDprefix + ProtocolResponse.REQUEST_HEADERS_KEY,
                 "GET / "
                         + httpVersionString
-                        + "\r\n" //
-                        + "User-Agent: myBot/1.0 (https://example.org/bot/; bot@example.org)\r\n" //
-                        + "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" //
-                        + "Accept-Language: en-us,en-gb,en;q=0.7,*;q=0.3\r\n" //
-                        + "Accept-Encoding: br,gzip\r\n" //
-                        + "Host: example.org\r\n" //
+                        + //
+                        "\r\n"
+                        + //
+                        "User-Agent: myBot/1.0 (https://example.org/bot/; bot@example.org)\r\n"
+                        + //
+                        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+                        + //
+                        "Accept-Language: en-us,en-gb,en;q=0.7,*;q=0.3\r\n"
+                        + //
+                        "Accept-Encoding: br,gzip\r\n"
+                        + //
+                        "Host: example.org\r\n"
                         + "Connection: Keep-Alive\r\n\r\n");
-        metadata.addValue(
-                protocolMDprefix + ProtocolResponse.RESPONSE_HEADERS_KEY, //
+        metadata.addValue( //
+                protocolMDprefix + ProtocolResponse.RESPONSE_HEADERS_KEY,
                 httpVersionString
-                        + " 200 OK\r\n" //
-                        + "Content-Type: text/html\r\n" //
-                        + "Content-Encoding: gzip\r\n" //
-                        + "Content-Length: 26\r\n" //
+                        + //
+                        " 200 OK\r\n"
+                        + //
+                        "Content-Type: text/html\r\n"
+                        + //
+                        "Content-Encoding: gzip\r\n"
+                        + //
+                        "Content-Length: 26\r\n"
                         + "Connection: close\r\n\r\n");
         metadata.addValue(
                 protocolMDprefix + ProtocolResponse.PROTOCOL_VERSIONS_KEY,

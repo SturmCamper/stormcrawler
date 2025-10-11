@@ -5,8 +5,8 @@ First, you need to add the WARC module to the dependencies of your project.
 ```
 		<dependency>
 			<groupId>org.apache.stormcrawler</groupId>
-			<artifactId>storm-crawler-warc</artifactId>
-			<version>${storm-crawler.version}</version>
+			<artifactId>stormcrawler-warc</artifactId>
+			<version>${stormcrawler.version}</version>
 		</dependency>
 ```
 
@@ -30,7 +30,7 @@ To configure the WARCHdfsBolt, include the following snippet in your crawl topol
                 .withPath(warcFilePath);
 
         Map<String,String> fields = new HashMap<>();
-        fields.put("software:", "StormCrawler 2.11 http://stormcrawler.net/");
+        fields.put("software:", "Apache StormCrawler 3.4.0 http://stormcrawler.net/");
         fields.put("format", "WARC File Format 1.0");
         fields.put("conformsTo:",
                 "https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.0/");
@@ -80,7 +80,7 @@ components:
       - name: "put"
         args:
          - "software"
-         - "StormCrawler 2.11 http://stormcrawler.net/"
+         - "Apache StormCrawler 3.4.0 http://stormcrawler.net/"
       - name: "put"
         args:
          - "format"
@@ -159,7 +159,7 @@ A note on the recording of HTTP requests and responses with StormCrawler and the
   - the HTTP response headers `Transfer-Encoding`, `Content-Encoding` and `Content-Length` are masked with the prefix `X-Crawler-`
   - a new `Content-Length` header is always appended with the actual payload length.
 
-
+You can specify in the configuration which metadata key/values to store as WARC metadata using `warc.metadata.keys`.
 
 ## Consuming WARC files
 

@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler;
@@ -17,12 +19,11 @@ package org.apache.stormcrawler;
 import com.esotericsoftware.kryo.serializers.DefaultArraySerializers.StringArraySerializer;
 import com.esotericsoftware.kryo.serializers.DefaultSerializers.StringSerializer;
 import com.esotericsoftware.kryo.serializers.MapSerializer.BindMap;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -87,7 +88,7 @@ public class Metadata {
      * @return the first value for the key or null if it does not exist *
      */
     public String getFirstValue(String key) {
-        String[] values = md.get(key);
+        String[] values = getValues(key);
         if (values == null) return null;
         if (values.length == 0) return null;
         return values[0];
@@ -107,14 +108,15 @@ public class Metadata {
     }
 
     public String[] getValues(String key) {
-        String[] values = md.get(key);
+        if (key == null || key.isEmpty()) return null;
+        String[] values = md.getOrDefault(key, md.get(key.toLowerCase(Locale.ROOT)));
         if (values == null) return null;
         if (values.length == 0) return null;
         return values;
     }
 
     public boolean containsKey(String key) {
-        return md.containsKey(key);
+        return md.containsKey(key) || md.containsKey(key.toLowerCase(Locale.ROOT));
     }
 
     public boolean containsKeyWithValue(String key, String value) {
@@ -158,21 +160,21 @@ public class Metadata {
         md.put(key, newvals);
     }
 
-    public void addValues(String key, Collection<String> values) {
+    public void addValues(String key, String[] values) {
         checkLockException();
 
-        if (values == null || values.size() == 0) return;
-        String[] existingvals = md.get(key);
-        if (existingvals == null) {
-            md.put(key, values.toArray(new String[0]));
+        if (values == null || values.length == 0) return;
+        if (!md.containsKey(key)) {
+            md.put(key, values);
             return;
         }
+        for (String value : values) {
+            addValue(key, value);
+        }
+    }
 
-        ArrayList<String> existing = new ArrayList<>(existingvals.length + values.size());
-        Collections.addAll(existing, existingvals);
-
-        existing.addAll(values);
-        md.put(key, existing.toArray(new String[0]));
+    public void addValues(String key, Collection<String> values) {
+        addValues(key, values.toArray(new String[0]));
     }
 
     /**
@@ -191,9 +193,7 @@ public class Metadata {
     public String toString(String prefix) {
         StringBuilder sb = new StringBuilder();
         if (prefix == null) prefix = "";
-        Iterator<Entry<String, String[]>> iter = md.entrySet().iterator();
-        while (iter.hasNext()) {
-            Entry<String, String[]> entry = iter.next();
+        for (Entry<String, String[]> entry : md.entrySet()) {
             for (String val : entry.getValue()) {
                 sb.append(prefix).append(entry.getKey()).append(": ").append(val).append("\n");
             }

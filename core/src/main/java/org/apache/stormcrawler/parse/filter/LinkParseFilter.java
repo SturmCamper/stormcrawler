@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.parse.filter;
@@ -62,7 +64,7 @@ public class LinkParseFilter extends XPathFilter {
         ParseData parseData = parse.get(URL);
         Metadata metadata = parseData.getMetadata();
 
-        Map<String, Outlink> dedup = new HashMap<String, Outlink>();
+        Map<String, Outlink> dedup = new HashMap<>();
 
         for (Outlink o : parse.getOutlinks()) {
             dedup.put(o.getTargetURL(), o);
@@ -79,9 +81,7 @@ public class LinkParseFilter extends XPathFilter {
         }
 
         // applies the XPATH expression in the order in which they are produced
-        java.util.Iterator<List<LabelledExpression>> iter = expressions.values().iterator();
-        while (iter.hasNext()) {
-            List<LabelledExpression> leList = iter.next();
+        for (List<LabelledExpression> leList : expressions.values()) {
             for (LabelledExpression le : leList) {
                 try {
                     List<String> values = le.evaluate(doc);
@@ -119,7 +119,7 @@ public class LinkParseFilter extends XPathFilter {
             }
         }
 
-        parse.setOutlinks(new ArrayList(dedup.values()));
+        parse.setOutlinks(new ArrayList<>(dedup.values()));
     }
 
     @Override

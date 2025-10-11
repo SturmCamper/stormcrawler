@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.protocol.httpclient;
@@ -17,17 +19,20 @@ package org.apache.stormcrawler.protocol.httpclient;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.http.Header;
 import org.apache.http.HeaderIterator;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
@@ -55,10 +60,9 @@ import org.apache.stormcrawler.Constants;
 import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.persistence.Status;
 import org.apache.stormcrawler.protocol.AbstractHttpProtocol;
-import org.apache.stormcrawler.protocol.HttpHeaders;
 import org.apache.stormcrawler.protocol.Protocol;
 import org.apache.stormcrawler.protocol.ProtocolResponse;
-import org.apache.stormcrawler.proxy.*;
+import org.apache.stormcrawler.proxy.SCProxy;
 import org.apache.stormcrawler.util.ConfUtils;
 import org.apache.stormcrawler.util.CookieConverter;
 import org.jetbrains.annotations.Nullable;
@@ -103,7 +107,7 @@ public class HttpProtocol extends AbstractHttpProtocol
 
         String accept = ConfUtils.getString(conf, "http.accept");
         if (StringUtils.isNotBlank(accept)) {
-            defaultHeaders.add(new BasicHeader("Accept", accept));
+            defaultHeaders.add(new BasicHeader(HttpHeaders.ACCEPT, accept));
         }
 
         customHeaders.forEach(
@@ -118,13 +122,15 @@ public class HttpProtocol extends AbstractHttpProtocol
             String basicAuthPass = ConfUtils.getString(conf, "http.basicauth.password", "");
             String encoding =
                     Base64.getEncoder()
-                            .encodeToString((basicAuthUser + ":" + basicAuthPass).getBytes());
-            defaultHeaders.add(new BasicHeader("Authorization", "Basic " + encoding));
+                            .encodeToString(
+                                    (basicAuthUser + ":" + basicAuthPass)
+                                            .getBytes(StandardCharsets.UTF_8));
+            defaultHeaders.add(new BasicHeader(HttpHeaders.AUTHORIZATION, "Basic " + encoding));
         }
 
         String acceptLanguage = ConfUtils.getString(conf, "http.accept.language");
         if (StringUtils.isNotBlank(acceptLanguage)) {
-            defaultHeaders.add(new BasicHeader("Accept-Language", acceptLanguage));
+            defaultHeaders.add(new BasicHeader(HttpHeaders.ACCEPT_LANGUAGE, acceptLanguage));
         }
 
         builder =
@@ -159,39 +165,42 @@ public class HttpProtocol extends AbstractHttpProtocol
         // conditionally add a dynamic proxy
         if (proxyManager != null) {
             // retrieve proxy from proxy manager
-            SCProxy prox = proxyManager.getProxy(md);
+            Optional<SCProxy> proxOptional = proxyManager.getProxy(md);
+            if (proxOptional.isPresent()) {
+                SCProxy prox = proxOptional.get();
+                // conditionally configure proxy authentication
+                if (StringUtils.isNotBlank(prox.getUsername())) {
+                    List<String> authSchemes = new ArrayList<>();
 
-            // conditionally configure proxy authentication
-            if (StringUtils.isNotBlank(prox.getUsername())) {
-                List<String> authSchemes = new ArrayList<>();
+                    // Can make configurable and add more in future
+                    authSchemes.add(AuthSchemes.BASIC);
+                    requestConfigBuilder.setProxyPreferredAuthSchemes(authSchemes);
 
-                // Can make configurable and add more in future
-                authSchemes.add(AuthSchemes.BASIC);
-                requestConfigBuilder.setProxyPreferredAuthSchemes(authSchemes);
+                    BasicCredentialsProvider basicAuthCreds = new BasicCredentialsProvider();
+                    basicAuthCreds.setCredentials(
+                            new AuthScope(prox.getAddress(), Integer.parseInt(prox.getPort())),
+                            new UsernamePasswordCredentials(
+                                    prox.getUsername(), prox.getPassword()));
+                    builder.setDefaultCredentialsProvider(basicAuthCreds);
+                }
 
-                BasicCredentialsProvider basicAuthCreds = new BasicCredentialsProvider();
-                basicAuthCreds.setCredentials(
-                        new AuthScope(prox.getAddress(), Integer.parseInt(prox.getPort())),
-                        new UsernamePasswordCredentials(prox.getUsername(), prox.getPassword()));
-                builder.setDefaultCredentialsProvider(basicAuthCreds);
+                HttpHost proxy = new HttpHost(prox.getAddress(), Integer.parseInt(prox.getPort()));
+                DefaultProxyRoutePlanner routePlanner = new DefaultProxyRoutePlanner(proxy);
+                builder.setRoutePlanner(routePlanner);
+
+                // save start time for debugging speed impact of request config
+                // build
+                long buildStart = System.currentTimeMillis();
+
+                // set request config to new configuration with dynamic proxy
+                reqConfig = requestConfigBuilder.build();
+
+                LOG.debug(
+                        "time to build http request config with proxy: {}ms",
+                        System.currentTimeMillis() - buildStart);
+
+                LOG.debug("fetching with " + prox.toString());
             }
-
-            HttpHost proxy = new HttpHost(prox.getAddress(), Integer.parseInt(prox.getPort()));
-            DefaultProxyRoutePlanner routePlanner = new DefaultProxyRoutePlanner(proxy);
-            builder.setRoutePlanner(routePlanner);
-
-            // save start time for debugging speed impact of request config
-            // build
-            long buildStart = System.currentTimeMillis();
-
-            // set request config to new configuration with dynamic proxy
-            reqConfig = requestConfigBuilder.build();
-
-            LOG.debug(
-                    "time to build http request config with proxy: {}ms",
-                    System.currentTimeMillis() - buildStart);
-
-            LOG.debug("fetching with " + prox.toString());
         }
 
         HttpRequestBase request = new HttpGet(url);
@@ -208,22 +217,22 @@ public class HttpProtocol extends AbstractHttpProtocol
 
             String lastModified = md.getFirstValue(HttpHeaders.LAST_MODIFIED);
             if (StringUtils.isNotBlank(lastModified)) {
-                request.addHeader("If-Modified-Since", HttpHeaders.formatHttpDate(lastModified));
+                request.addHeader(HttpHeaders.IF_MODIFIED_SINCE, formatHttpDate(lastModified));
             }
 
-            String ifNoneMatch = md.getFirstValue("etag", protocolMDprefix);
+            String ifNoneMatch = md.getFirstValue(HttpHeaders.ETAG, protocolMDprefix);
             if (StringUtils.isNotBlank(ifNoneMatch)) {
-                request.addHeader("If-None-Match", ifNoneMatch);
+                request.addHeader(HttpHeaders.IF_NONE_MATCH, ifNoneMatch);
             }
 
             String accept = md.getFirstValue("http.accept");
             if (StringUtils.isNotBlank(accept)) {
-                request.setHeader(new BasicHeader("Accept", accept));
+                request.setHeader(new BasicHeader(HttpHeaders.ACCEPT, accept));
             }
 
             String acceptLanguage = md.getFirstValue("http.accept.language");
             if (StringUtils.isNotBlank(acceptLanguage)) {
-                request.setHeader(new BasicHeader("Accept-Language", acceptLanguage));
+                request.setHeader(new BasicHeader(HttpHeaders.ACCEPT_LANGUAGE, acceptLanguage));
             }
 
             String pageMaxContentStr = md.getFirstValue("http.content.limit");
@@ -321,7 +330,7 @@ public class HttpProtocol extends AbstractHttpProtocol
 
     private ResponseHandler<ProtocolResponse> getResponseHandlerWithContentLimit(
             int pageMaxContent) {
-        return new ResponseHandler<ProtocolResponse>() {
+        return new ResponseHandler<>() {
             public ProtocolResponse handleResponse(final HttpResponse response) throws IOException {
                 return handleResponseWithContentLimit(response, pageMaxContent);
             }

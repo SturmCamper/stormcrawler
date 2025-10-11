@@ -1,15 +1,17 @@
-/**
- * Licensed to DigitalPebble Ltd under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership.
- * DigitalPebble licenses this file to You under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License. You may obtain a copy of the
- * License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package org.apache.stormcrawler.parse.filter;
@@ -39,8 +41,7 @@ import org.w3c.dom.DocumentFragment;
  * Assigns one or more tags to the metadata of a document based on its URL matching patterns defined
  * in a JSON resource file.
  *
- * <p>The resource file must specifify regular expressions for inclusions but also for exclusions
- * e.g.
+ * <p>The resource file must specify regular expressions for inclusions but also for exclusions e.g.
  *
  * <pre>
  * {
@@ -68,7 +69,7 @@ public class CollectionTagger extends ParseFilter implements JSONResource {
     private static final Logger LOG = LoggerFactory.getLogger(CollectionTagger.class);
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static final TypeReference<Collections> reference = new TypeReference<Collections>() {};
+    private static final TypeReference<Collections> reference = new TypeReference<>() {};
 
     private Collections collections = new Collections();
 
@@ -134,7 +135,7 @@ class Collections {
     }
 
     public String[] tag(String url) {
-        Set<String> tags = new HashSet<String>();
+        Set<String> tags = new HashSet<>();
         for (Collection collection : collections) {
             if (collection.matches(url)) {
                 tags.add(collection.getName());
