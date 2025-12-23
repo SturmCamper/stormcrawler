@@ -20,6 +20,7 @@ package org.apache.stormcrawler.util;
 import java.net.IDN;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -28,6 +29,22 @@ import java.util.regex.Pattern;
 public class URLUtil {
 
     private URLUtil() {}
+
+    /**
+     * Converts a URL string to a {@link URL} object using {@link URI} to avoid the deprecated
+     * {@code new URL(String)} constructor.
+     *
+     * @param url the URL string to convert
+     * @return the parsed URL
+     * @throws MalformedURLException if the string is not a valid URL or URI
+     */
+    public static URL toURL(String url) throws MalformedURLException {
+        try {
+            return new URI(url).toURL();
+        } catch (URISyntaxException | IllegalArgumentException e) {
+            throw (MalformedURLException) new MalformedURLException(e.getMessage()).initCause(e);
+        }
+    }
 
     /**
      * Resolve relative URL-s and fix a few java.net.URL errors in handling of URLs with embedded
@@ -138,7 +155,7 @@ public class URLUtil {
      * @throws MalformedURLException
      */
     public static String[] getHostSegments(String url) throws MalformedURLException {
-        return getHostSegments(new URL(url));
+        return getHostSegments(toURL(url));
     }
 
     /**
@@ -149,7 +166,7 @@ public class URLUtil {
      */
     public static String getHost(String url) {
         try {
-            return new URL(url).getHost().toLowerCase(Locale.ROOT);
+            return toURL(url).getHost().toLowerCase(Locale.ROOT);
         } catch (MalformedURLException e) {
             return null;
         }
@@ -167,7 +184,7 @@ public class URLUtil {
             // get the full url, and replace the query string with and empty
             // string
             url = url.toLowerCase(Locale.ROOT);
-            String queryStr = new URL(url).getQuery();
+            String queryStr = toURL(url).getQuery();
             return (queryStr != null) ? url.replace("?" + queryStr, "") : url;
         } catch (MalformedURLException e) {
             return null;
@@ -176,7 +193,7 @@ public class URLUtil {
 
     public static String toASCII(String url) {
         try {
-            URL u = new URL(url);
+            URL u = toURL(url);
             URI p =
                     new URI(
                             u.getProtocol(),
@@ -195,7 +212,7 @@ public class URLUtil {
 
     public static String toUNICODE(String url) {
         try {
-            URL u = new URL(url);
+            URL u = toURL(url);
             URI p =
                     new URI(
                             u.getProtocol(),

@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.net.IDN;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -39,6 +40,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.stormcrawler.Metadata;
 import org.apache.stormcrawler.filtering.URLFilter;
+import org.apache.stormcrawler.util.URLUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -100,6 +102,9 @@ public class BasicURLNormalizer extends URLFilter {
 
         final String originalURL = urlToFilter;
 
+        // pre-sanitize characters that are illegal in URIs but common in practice
+        urlToFilter = sanitizeForURI(urlToFilter);
+
         if (removeAnchorPart) {
             final int lastHash = urlToFilter.lastIndexOf("#");
             if (lastHash != -1) {
@@ -120,7 +125,7 @@ public class BasicURLNormalizer extends URLFilter {
         }
 
         try {
-            URL theUrl = new URL(urlToFilter);
+            URL theUrl = URLUtil.toURL(urlToFilter);
             String file = theUrl.getFile();
             String protocol = theUrl.getProtocol();
             String host = theUrl.getHost();
@@ -152,9 +157,19 @@ public class BasicURLNormalizer extends URLFilter {
                 hasChanged = true;
             }
             if (hasChanged) {
-                urlToFilter = new URL(protocol, host, port, file2).toString();
+                URI uri =
+                        new URI(
+                                protocol,
+                                null, // userInfo
+                                host,
+                                port,
+                                file2, // path
+                                null, // query
+                                null // fragment
+                                );
+                urlToFilter = uri.toString();
             }
-        } catch (MalformedURLException e) {
+        } catch (MalformedURLException | URISyntaxException e) {
             return null;
         }
 
@@ -223,7 +238,7 @@ public class BasicURLNormalizer extends URLFilter {
         try {
             // Handle illegal characters by making a url first
             // this will clean illegal characters like |
-            final URL url = new URL(urlToFilter);
+            final URL url = URLUtil.toURL(urlToFilter);
 
             String query = url.getQuery();
             String path = url.getPath();
@@ -288,7 +303,7 @@ public class BasicURLNormalizer extends URLFilter {
                     + ((s = url.getRef()) != null ? '#' + s : "");
 
         } catch (MalformedURLException e) {
-            LOG.warn("Invalid urlToFilter {}. {}", urlToFilter, e);
+            LOG.warn("Invalid urlToFilter {}.", urlToFilter, e);
             return null;
         }
     }
@@ -430,5 +445,56 @@ public class BasicURLNormalizer extends URLFilter {
             }
         }
         return true;
+    }
+
+    /**
+     * Pre-sanitize a URL string by encoding characters that are illegal in URIs per RFC 3986 but
+     * commonly found in URLs in the wild. Also converts non-standard {@code %uXXXX} percent
+     * encoding to proper UTF-8 percent encoding.
+     */
+    static String sanitizeForURI(String url) {
+        // Handle non-standard %uXXXX encoding (e.g. from JavaScript escape())
+        final Matcher matcher = illegalEscapePattern.matcher(url);
+        if (matcher.find()) {
+            final StringBuilder sb = new StringBuilder();
+            int end = 0;
+            do {
+                sb.append(url, end, matcher.start());
+                final int codePoint = Integer.parseInt(matcher.group(1), 16);
+                for (byte b :
+                        new String(Character.toChars(codePoint)).getBytes(StandardCharsets.UTF_8)) {
+                    sb.append(String.format(Locale.ROOT, "%%%02X", b & 0xFF));
+                }
+                end = matcher.end();
+            } while (matcher.find());
+            sb.append(url.substring(end));
+            url = sb.toString();
+        }
+
+        // Encode characters that are illegal in URIs but commonly encountered
+        final StringBuilder sb = new StringBuilder(url.length());
+        for (int i = 0; i < url.length(); i++) {
+            final char c = url.charAt(i);
+            switch (c) {
+                case '|':
+                    sb.append("%7C");
+                    break;
+                case '\\':
+                    sb.append("%5C");
+                    break;
+                case ' ':
+                    sb.append("%20");
+                    break;
+                case '{':
+                    sb.append("%7B");
+                    break;
+                case '}':
+                    sb.append("%7D");
+                    break;
+                default:
+                    sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 }
