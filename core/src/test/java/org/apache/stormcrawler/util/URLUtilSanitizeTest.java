@@ -15,39 +15,39 @@
  * limitations under the License.
  */
 
-package org.apache.stormcrawler.filtering.basic;
+package org.apache.stormcrawler.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-class BasicURLNormalizerSanitizeTest {
+class URLUtilSanitizeTest {
 
     @Test
     void testSanitizePipe() {
         String input = "http://example.com?q=a|b";
-        String result = BasicURLNormalizer.sanitizeForURI(input);
+        String result = URLUtil.sanitizeForURI(input);
         assertEquals("http://example.com?q=a%7Cb", result);
     }
 
     @Test
     void testSanitizeBackslash() {
         String input = "http://example.com/\\path\\file.pdf";
-        String result = BasicURLNormalizer.sanitizeForURI(input);
+        String result = URLUtil.sanitizeForURI(input);
         assertEquals("http://example.com/%5Cpath%5Cfile.pdf", result);
     }
 
     @Test
     void testSanitizeSpace() {
         String input = "http://example.com/my path/file name.html";
-        String result = BasicURLNormalizer.sanitizeForURI(input);
+        String result = URLUtil.sanitizeForURI(input);
         assertEquals("http://example.com/my%20path/file%20name.html", result);
     }
 
     @Test
     void testSanitizeCurlyBraces() {
         String input = "http://example.com/{id}/page";
-        String result = BasicURLNormalizer.sanitizeForURI(input);
+        String result = URLUtil.sanitizeForURI(input);
         assertEquals("http://example.com/%7Bid%7D/page", result);
     }
 
@@ -56,14 +56,14 @@ class BasicURLNormalizerSanitizeTest {
         // %u011f is non-standard encoding for ğ (U+011F)
         // Should be converted to UTF-8 percent encoding: %C4%9F
         String input = "http://example.com/page?s=ni%u011fde";
-        String result = BasicURLNormalizer.sanitizeForURI(input);
+        String result = URLUtil.sanitizeForURI(input);
         assertEquals("http://example.com/page?s=ni%C4%9Fde", result);
     }
 
     @Test
     void testSanitizeNonStandardPercentEncodingMultiple() {
         String input = "http://example.com/%u0041%u0042";
-        String result = BasicURLNormalizer.sanitizeForURI(input);
+        String result = URLUtil.sanitizeForURI(input);
         // U+0041 = 'A' → %41, U+0042 = 'B' → %42
         assertEquals("http://example.com/%41%42", result);
     }
@@ -71,28 +71,28 @@ class BasicURLNormalizerSanitizeTest {
     @Test
     void testSanitizeValidUrlUnchanged() {
         String input = "http://example.com/path?query=value&other=123";
-        String result = BasicURLNormalizer.sanitizeForURI(input);
+        String result = URLUtil.sanitizeForURI(input);
         assertEquals(input, result);
     }
 
     @Test
     void testSanitizeAlreadyEncodedUnchanged() {
         String input = "http://example.com/path%20with%7Cpipe";
-        String result = BasicURLNormalizer.sanitizeForURI(input);
+        String result = URLUtil.sanitizeForURI(input);
         assertEquals(input, result);
     }
 
     @Test
     void testSanitizeMultiplePipes() {
         String input = "http://example.com?q=top-651451||1|60|1|2||||";
-        String result = BasicURLNormalizer.sanitizeForURI(input);
+        String result = URLUtil.sanitizeForURI(input);
         assertEquals("http://example.com?q=top-651451%7C%7C1%7C60%7C1%7C2%7C%7C%7C%7C", result);
     }
 
     @Test
     void testSanitizeMixedIllegalChars() {
         String input = "http://example.com/path with|pipe";
-        String result = BasicURLNormalizer.sanitizeForURI(input);
+        String result = URLUtil.sanitizeForURI(input);
         assertEquals("http://example.com/path%20with%7Cpipe", result);
     }
 }

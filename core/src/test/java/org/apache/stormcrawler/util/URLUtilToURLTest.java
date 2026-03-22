@@ -58,27 +58,35 @@ class URLUtilToURLTest {
     }
 
     @Test
-    void testInvalidUri() {
-        // Pipe is illegal in URIs per RFC 3986
-        assertThrows(MalformedURLException.class, () -> URLUtil.toURL("http://example.com?q=a|b"));
+    void testPipeFallbackSanitization() throws MalformedURLException {
+        // Pipe is illegal in URIs per RFC 3986 but toURL sanitizes on fallback
+        URL url = URLUtil.toURL("http://example.com?q=a|b");
+        assertNotNull(url);
+        assertEquals("example.com", url.getHost());
     }
 
     @Test
-    void testBackslashInUri() {
-        // Backslash is illegal in URIs
-        assertThrows(MalformedURLException.class, () -> URLUtil.toURL("http://example.com/\\path"));
+    void testBackslashFallbackSanitization() throws MalformedURLException {
+        // Backslash is illegal in URIs but toURL sanitizes on fallback
+        URL url = URLUtil.toURL("http://example.com/\\path");
+        assertNotNull(url);
     }
 
     @Test
-    void testSpaceInUri() {
-        // Unencoded space is illegal in URIs
-        assertThrows(
-                MalformedURLException.class, () -> URLUtil.toURL("http://example.com/my path"));
+    void testSpaceFallbackSanitization() throws MalformedURLException {
+        // Unencoded space is illegal in URIs but toURL sanitizes on fallback
+        URL url = URLUtil.toURL("http://example.com/my path");
+        assertNotNull(url);
     }
 
     @Test
     void testCompletelyInvalidString() {
         assertThrows(MalformedURLException.class, () -> URLUtil.toURL("not a url at all"));
+    }
+
+    @Test
+    void testNonAbsoluteUri() {
+        assertThrows(MalformedURLException.class, () -> URLUtil.toURL("just/a/path"));
     }
 
     @Test
@@ -98,9 +106,7 @@ class URLUtilToURLTest {
     @Test
     void testCauseIsPreserved() {
         MalformedURLException ex =
-                assertThrows(
-                        MalformedURLException.class,
-                        () -> URLUtil.toURL("http://example.com/path with spaces"));
+                assertThrows(MalformedURLException.class, () -> URLUtil.toURL("not a url at all"));
         assertNotNull(ex.getCause());
     }
 }
