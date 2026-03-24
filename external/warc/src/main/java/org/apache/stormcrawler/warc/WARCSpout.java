@@ -43,6 +43,7 @@ import org.apache.stormcrawler.persistence.Status;
 import org.apache.stormcrawler.protocol.ProtocolResponse;
 import org.apache.stormcrawler.spout.FileSpout;
 import org.apache.stormcrawler.util.ConfUtils;
+import org.apache.stormcrawler.util.URLUtil;
 import org.netpreserve.jwarc.HttpMessage;
 import org.netpreserve.jwarc.HttpRequest;
 import org.netpreserve.jwarc.HttpResponse;
@@ -150,7 +151,7 @@ public class WARCSpout extends FileSpout {
 
     private ReadableByteChannel openChannel(String path) throws IOException {
         if (path.matches("^https?://.*")) {
-            URL warcUrl = new URL(path);
+            URL warcUrl = URLUtil.toURL(path);
             return Channels.newChannel(warcUrl.openStream());
         }
         org.apache.hadoop.fs.Path hdfsPath = new org.apache.hadoop.fs.Path(path);
