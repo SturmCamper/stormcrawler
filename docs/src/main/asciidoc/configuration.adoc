@@ -201,14 +201,14 @@ implementation.
 | http.robots.file.skip | false | Ignore robots.txt rules (1.17+).
 | http.skip.robots | false | Deprecated (replaced by http.robots.file.skip).
 | http.store.headers | false | Whether to store response headers.
-| http.store.responsetime | true | Not yet implemented — store response time in Metadata.
+| http.store.responsetime | true | Not yet implemented — intended to store response time in Metadata. Not present in default configuration.
 | http.timeout | 10000 | Connection timeout (ms).
 | http.use.cookies | false | Use cookies in subsequent requests.
 | https.protocol.implementation | org.apache.stormcrawler.protocol.httpclient.HttpProtocol | HTTPS Protocol
 implementation.
 | partition.url.mode | byHost | Defines how URLs are partitioned: byHost, byDomain, or byIP.
-| protocols | http,https | Supported protocols.
-| redirections.allowed | true | Allow URL redirects.
+| protocols | http,https,file | Supported protocols.
+| http.allow.redirects | false | Allow URL redirects.
 | sitemap.discovery | false | Enable automatic sitemap discovery.
 |===
 
@@ -218,13 +218,13 @@ implementation.
 |===
 | key | default value | description
 
-| cacheConfigParamName | maximumSize=10000,expireAfterWrite=6h | CacheBuilder configuration for robots cache.
-| errorcacheConfigParamName | maximumSize=10000,expireAfterWrite=1h | CacheBuilder configuration for error cache.
+| robots.cache.spec | maximumSize=10000,expireAfterWrite=6h | CacheBuilder configuration for robots cache.
+| robots.error.cache.spec | maximumSize=10000,expireAfterWrite=1h | CacheBuilder configuration for error cache.
 | file.encoding | UTF-8 | Encoding for FileProtocol.
 | http.custom.headers | - | Custom HTTP headers.
-| http.accept | - | HTTP Accept
+| http.accept | text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8 | HTTP Accept
 header.
-| http.accept.language | - | HTTP Accept-Language
+| http.accept.language | en-us,en-gb,en;q=0.7,*;q=0.3 | HTTP Accept-Language
 header.
 | http.content.partial.as.trimmed | false | Accepts partially fetched content in OKHTTP.
 | http.trust.everything | true | If true, trust all SSL/TLS connections.
@@ -266,7 +266,7 @@ that is being calculated by a link:https://github.com/apache/stormcrawler/blob/m
 
 | fetchInterval.default | 1440 | Default revisit interval (minutes). Used by DefaultScheduler
 .
-| fetchInterval.error | 44640 | Revisit interval for error pages (minutes).
+| fetchInterval.error | -1 | Revisit interval for error pages (minutes). -1 means never refetch.
 | fetchInterval.fetch.error | 120 | Revisit interval for fetch errors (minutes).
 | status.updater.cache.spec | maximumSize=10000, expireAfterAccess=1h | Cache specification
 .
@@ -312,5 +312,5 @@ minimising metadata clashes
 | metadata.track.path | true | Track URL path history in metadata.
 | metadata.transfer | - | Metadata to transfer to outlinks.
 | metadata.transfer.class | org.apache.stormcrawler.util.MetadataTransfer | Class handling metadata transfer.
-| protocol.md.prefix | - | Prefix for remote metadata keys to avoid collisions.
+| protocol.md.prefix | protocol. | Prefix for remote metadata keys to avoid collisions.
 |===

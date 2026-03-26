@@ -29,7 +29,7 @@ Black arrows show the *main data flow*, gray arrows represent URLs *taken from t
 
 The crawl begins with the *Frontier*, which is responsible for scheduling,
 prioritization, politeness, and retry logic. URLs are emitted by a
-`FrontierSpout` and partitioned by the `URLPartitioner`, typically using the
+`Spout` (e.g., `AggregationSpout`, `SQLSpout`) and partitioned by the `URLPartitioner`, typically using the
 host as a key to enforce politeness constraints.
 
 The `Fetcher` retrieves web resources and emits both the fetched content and
