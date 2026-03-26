@@ -43,6 +43,23 @@ The class link:https://github.com/apache/stormcrawler/blob/main/core/src/main/ja
 
 In most cases, the extending classes will just need to implement the method `store(String URL, Status status, Metadata metadata, Date nextFetch)` and handle their own initialisation in `prepare()`. You can find an example of a class which extends it in the link:https://github.com/apache/stormcrawler/blob/main/external/opensearch/src/main/java/org/apache/stormcrawler/opensearch/persistence/StatusUpdaterBolt.java[StatusUpdaterBolt] for OpenSearch.
 
+==== AdaptiveScheduler
+The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/persistence/AdaptiveScheduler.java[AdaptiveScheduler] extends the `DefaultScheduler` and adjusts the fetch interval based on whether a page has changed since the last fetch (detected via MD5 signature comparison). If the page changed, the interval shrinks toward a minimum; if unchanged, it grows toward a maximum. This avoids unnecessary re-fetches of static pages while keeping dynamic pages fresh.
+
+Configuration example:
+
+[source,yaml]
+----
+scheduler.class: "org.apache.stormcrawler.persistence.AdaptiveScheduler"
+scheduler.adaptive.setLastModified: true
+scheduler.adaptive.fetchInterval.min: 60
+scheduler.adaptive.fetchInterval.max: 20160
+scheduler.adaptive.fetchInterval.rate.incr: .5
+scheduler.adaptive.fetchInterval.rate.decr: .5
+----
+
+The `AdaptiveScheduler` requires the `MD5SignatureParseFilter` to be configured so that the `signature` metadata field is populated.
+
 
 === Bolts
 
@@ -116,6 +133,28 @@ StormCrawler can handle sitemap files thanks to the **SiteMapParserBolt**. This 
 The reason for this is that the **SiteMapParserBolt** acts as a filter: it passes on any incoming tuples to the default stream so that they get processed by the **ParserBolt**, unless the tuple contains `isSitemap=true` in its metadata, in which case the **SiteMapParserBolt** will parse it itself. Any outlinks found in the sitemap files are then emitted on the [[StatusStream]].
 
 The **SiteMapParserBolt** applies any configured xref:parsefilters[ParseFilters] to the documents it parses and, just like its equivalent for HTML pages, it uses xref:metadatatransfer[MetadataTransfer] to populate the Metadata objects for the Outlinks it finds.
+
+==== FeedParserBolt
+The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/bolt/FeedParserBolt.java[FeedParserBolt] handles RSS and Atom feeds. Like the **SiteMapParserBolt**, it acts as a filter in the topology: it passes non-feed tuples through on the default stream, and only parses tuples whose metadata contains `isFeed=true`. Discovered feed entries are emitted on the status stream. The bolt is configured with `feed.sniffContent` (to auto-detect feeds) and `feed.filter.hours.since.published` (to discard old entries).
+
+==== URLPartitionerBolt
+The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/bolt/URLPartitionerBolt.java[URLPartitionerBolt] partitions incoming URLs by host, domain, or IP address (controlled by `partition.url.mode`). It is typically placed before a fetcher bolt to ensure that URLs destined for the same server are routed to the same bolt instance, enabling effective politeness enforcement. It uses the link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/util/URLPartitioner.java[URLPartitioner] utility internally.
+
+==== StatusEmitterBolt
+The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/bolt/StatusEmitterBolt.java[StatusEmitterBolt] is an abstract base class for bolts that emit tuples on both the default stream and the status stream. It provides utility methods for emitting status updates (e.g., errors, redirections, discovered URLs). The fetcher and parser bolts (`FetcherBolt`, `SimpleFetcherBolt`, `JSoupParserBolt`, `SiteMapParserBolt`, `FeedParserBolt`) all extend this class.
+
+=== Spouts
+
+StormCrawler provides several spout implementations for feeding URLs into the topology:
+
+==== FileSpout
+The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/spout/FileSpout.java[FileSpout] reads seed URLs from UTF-8 text files and loads them into memory. Each line is parsed using `StringTabScheme` into a URL and optional metadata (tab-separated). This is useful for one-off crawls with a known list of URLs.
+
+==== MemorySpout
+The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/spout/MemorySpout.java[MemorySpout] stores URLs in an in-memory priority queue. It is intended for testing and debugging in local mode or with a single worker. It can be used with `MemoryStatusUpdater` to emulate a recursive crawl without an external storage backend.
+
+==== AbstractQueryingSpout
+The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/persistence/AbstractQueryingSpout.java[AbstractQueryingSpout] is the abstract base class for spouts that query a storage backend for URLs to fetch. External module spouts such as `AggregationSpout` (OpenSearch), `SolrSpout`, `SQLSpout`, and the URLFrontier `Spout` all extend this class. It handles throttling, acking, and coordination with the URL buffer (`urlbuffer.class`).
 
 === Filters
 
@@ -285,6 +324,9 @@ The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org
 ====== RobotsFilter
 The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/filtering/robots/RobotsFilter.java[RobotsFilter] discards URLs based on the robots.txt directives. This is meant for small, limited crawls where the number of hosts is finite. Using this on a larger or open crawl would impact performance as the filter tries to retrieve the robots.txt files for any host found.
 
+====== SelfURLFilter
+The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/filtering/basic/SelfURLFilter.java[SelfURLFilter] removes self-referential URLs, i.e., outlinks that point back to the same page they were discovered on (after normalization).
+
 ====== SitemapFilter
 The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/filtering/sitemap/SitemapFilter.java[SitemapFilter] discards the outlinks of URLs which are not sitemaps when sitemaps have been found.
 
@@ -333,6 +375,21 @@ The following network protocols are implemented in StormCrawler:
 
 ===== File
 * link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/protocol/file/FileProtocol.java[FileProtocol]
+
+===== DelegatorProtocol
+The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/protocol/DelegatorProtocol.java[DelegatorProtocol] enables selection from a collection of sub-protocols using filters based on metadata and URL patterns. The last protocol in the list acts as the default. This is useful when certain URLs need to be fetched with a browser-based protocol (e.g., Selenium) while the majority use a standard HTTP client.
+
+[source,yaml]
+----
+http.protocol.implementation: "org.apache.stormcrawler.protocol.DelegatorProtocol"
+protocol.delegator.config:
+  - className: "org.apache.stormcrawler.protocol.httpclient.HttpProtocol"
+    filters:
+      domain: "example.com"
+  - className: "org.apache.stormcrawler.protocol.okhttp.HttpProtocol"
+----
+
+The protocols are tried in order; the first matching filter wins. Filters can match on metadata keys, domain names, or URL regex patterns.
 
 ===== HTTP/S
 

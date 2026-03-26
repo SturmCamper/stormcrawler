@@ -164,8 +164,7 @@ features you are using in your Apache StormCrawler topology. Some external modul
 |===
 | key | default value | description
 
-| fetcher.max.crawl.delay | 30 | The maximum number in seconds that will be accepted by Crawl-delay
-directives in robots.txt files. If the crawl-delay exceeds this value the behavior depends on the value of fetcher.max.crawl.delay.force.
+| fetcher.max.crawl.delay | 30 | Maximum accepted Crawl-delay from robots.txt (seconds). If the crawl-delay exceeds this value the behavior depends on the value of fetcher.max.crawl.delay.force.
 | fetcher.max.crawl.delay.force | false | Configures the behavior of fetcher if the robots.txt crawl-delay exceeds fetcher.max.crawl.delay. If false: the tuple is emitted to the StatusStream
 as an ERROR. If true: the queue delay is set to fetcher.max.crawl.delay.
 | fetcher.max.queue.size | -1 | The maximum length of the queue used to store items to be fetched by the FetcherBolt. A setting of -1 sets the length to Integer.MAX_VALUE.
@@ -180,6 +179,7 @@ is defined.
 | fetcher.server.min.delay | 0 | Delay between crawls for queues with >1 thread. Ignores robots.txt.
 | fetcher.threads.number | 10 | Total concurrent threads fetching pages. Adjust carefully based on system capacity.
 | fetcher.threads.per.queue | 1 | Default number of threads per queue. Can be overridden.
+| fetcher.threads.start.delay | 10 | Delay (seconds) before starting fetcher threads.
 | fetcher.timeout.queue | -1 | Maximum wait time (seconds) for items in the queue. -1 disables timeout.
 | fetcherbolt.queue.debug.filepath | "" | Path to a debug log (e.g. /tmp/fetcher-dump-{port}).
 | http.agent.description | - | Description for the User-Agent header.
@@ -196,10 +196,16 @@ implementation.
 | http.proxy.pass | - | Proxy password.
 | http.proxy.port | 8080 | Proxy port.
 | http.proxy.user | - | Proxy username.
-| http.robots.403.allow | true | Defines behavior when robots.txt returns HTTP 403.
+| http.retry.on.connection.failure | true | Retry fetching on connection failure.
+| http.robots.403.allow | true | Allow crawling when robots.txt returns HTTP 403.
+| http.robots.5xx.allow | false | Allow crawling when robots.txt returns a server error (5xx).
 | http.robots.agents | '' | Additional user-agent strings for interpreting robots.txt.
-| http.robots.file.skip | false | Ignore robots.txt rules (1.17+).
+| http.robots.content.limit | -1 | Maximum bytes to fetch for robots.txt. -1 uses http.content.limit.
+| http.robots.file.skip | false | Ignore robots.txt rules entirely.
+| http.robots.headers.skip | false | Ignore robots directives from HTTP headers.
+| http.robots.meta.skip | false | Ignore robots directives from HTML meta tags.
 | http.skip.robots | false | Deprecated (replaced by http.robots.file.skip).
+| robots.noFollow.strict | true | If true, remove all outlinks from pages marked as noFollow.
 | http.store.headers | false | Whether to store response headers.
 | http.timeout | 10000 | Connection timeout (ms).
 | http.use.cookies | false | Use cookies in subsequent requests.
@@ -209,6 +215,7 @@ implementation.
 | protocols | http,https,file | Supported protocols.
 | http.allow.redirects | false | Allow URL redirects.
 | sitemap.discovery | false | Enable automatic sitemap discovery.
+| urlbuffer.class | org.apache.stormcrawler.persistence.urlbuffer.SimpleURLBuffer | URL buffer implementation used by spouts.
 |===
 
 ==== Protocol
@@ -217,9 +224,14 @@ implementation.
 |===
 | key | default value | description
 
+| file.protocol.implementation | org.apache.stormcrawler.protocol.file.FileProtocol | Protocol implementation for file:// URLs.
+| file.encoding | UTF-8 | Encoding for FileProtocol.
+| protocol.instances.num | 1 | Number of instances per protocol implementation.
+| http.protocol.versions | - | HTTP protocol versions in order of preference (h2, http/1.1, http/1.0, h2c). If empty, uses implementation defaults.
 | robots.cache.spec | maximumSize=10000,expireAfterWrite=6h | CacheBuilder configuration for robots cache.
 | robots.error.cache.spec | maximumSize=10000,expireAfterWrite=1h | CacheBuilder configuration for error cache.
-| file.encoding | UTF-8 | Encoding for FileProtocol.
+| okhttp.protocol.connection.pool.max.idle.connections | 5 | OkHttp maximum number of idle connections.
+| okhttp.protocol.connection.pool.connection.keep.alive | 300 | OkHttp connection keep-alive time (seconds).
 | http.custom.headers | - | Custom HTTP headers.
 | http.accept | text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8 | HTTP Accept
 header.
@@ -247,10 +259,13 @@ The values below are used by sub-classes of `AbstractIndexerBolt`.
 |===
 | key | default value | description
 
+| indexer.canonical.name | canonical | Metadata key for the canonical URL. Used to replace the URL with its canonical form before indexing.
+| indexer.ignore.empty.fields | false | If true, skip fields with empty values when indexing.
 | indexer.md.filter | - | YAML list of key=value filters for metadata-based indexing.
 | indexer.md.mapping | - | YAML mapping from metadata fields to persistence layer fields.
-| indexer.text.fieldname | - | Field name for indexed HTML body text.
-| indexer.url.fieldname | - | Field name for indexed URL.
+| indexer.text.fieldname | content | Field name for indexed HTML body text.
+| indexer.text.maxlength | -1 | Maximum length of text to index. -1 means no limit.
+| indexer.url.fieldname | url | Field name for indexed URL.
 |===
 
 ==== Status Persistence
@@ -262,12 +277,13 @@ that is being calculated by a link:https://github.com/apache/stormcrawler/blob/m
 |===
 | key | default value | description
 
-| fetchInterval.default | 1440 | Default revisit interval (minutes). Used by DefaultScheduler
-.
+| fetchInterval.default | 1440 | Default revisit interval (minutes). Used by DefaultScheduler.
 | fetchInterval.error | -1 | Revisit interval for error pages (minutes). -1 means never refetch.
 | fetchInterval.fetch.error | 120 | Revisit interval for fetch errors (minutes).
-| status.updater.cache.spec | maximumSize=10000, expireAfterAccess=1h | Cache specification
-.
+| max.fetch.errors | 3 | Maximum number of successive fetch errors before changing status to ERROR.
+| scheduler.class | org.apache.stormcrawler.persistence.DefaultScheduler | Scheduler implementation for computing next fetch dates. Use AdaptiveScheduler for change-rate-based intervals.
+| status.updater.cache.spec | maximumSize=10000, expireAfterAccess=1h | Cache specification for the status updater.
+| status.updater.unit.round.date | SECOND | Unit for rounding the next fetch date. Can also be MINUTE or HOUR.
 | status.updater.use.cache | true | Whether to use cache to avoid re-persisting URLs.
 |===
 
@@ -279,17 +295,23 @@ Configures parsing of fetched text and the handling of discovered URIs
 |===
 | key | default value | description
 
-| collections.file | collections.json | Config for CollectionTagger
-.
+| collections.file | collections.json | Config for CollectionTagger.
 | collections.key | collections | Key under which tags are stored in metadata.
+| detect.charset.maxlength | 10000 | Maximum number of bytes used for charset detection.
+| detect.mimetype | true | Enable MIME type detection during parsing.
 | feed.filter.hours.since.published | -1 | Discard feeds older than value hours.
 | feed.sniffContent | false | Try to detect feeds automatically.
+| jsoup.treat.non.html.as.error | true | If true, non-HTML content is treated as an error by JSoupParserBolt.
 | parsefilters.config.file | parsefilters.json | Path to JSON config defining ParseFilters. See link:https://github.com/apache/stormcrawler/blob/main/core/src/main/resources/parsefilters.json[default parsefilters.json].
 | parser.emitOutlinks | true | Emit discovered links as DISCOVERED tuples.
 | parser.emitOutlinks.max.per.page | -1 | Limit number of emitted links per page.
+| sitemap.filter.hours.since.modified | -1 | Filter URLs in sitemaps based on their modification date. -1 disables filtering.
+| sitemap.schedule.delay | -1 | Staggered scheduling delay for sitemaps (minutes). -1 disables staggering.
+| sitemap.extensions | - | Sitemap extensions to parse (IMAGE, LINKS, MOBILE, NEWS, VIDEO).
 | textextractor.exclude.tags | "" | HTML tags ignored by TextExtractor.
 | textextractor.include.pattern | "" | Regex patterns to include for TextExtractor.
 | textextractor.no.text | false | Disable text extraction entirely.
+| textextractor.skip.after | -1 | Stop text extraction after this many characters. -1 means no limit.
 | track.anchors | true | Add anchor text to outlink metadata.
 | urlfilters.config.file | urlfilters.json | JSON file defining URL filters. See link:https://github.com/apache/stormcrawler/blob/main/archetype/src/main/resources/archetype-resources/src/main/resources/urlfilters.json[default urlfilters.json].
 |===
