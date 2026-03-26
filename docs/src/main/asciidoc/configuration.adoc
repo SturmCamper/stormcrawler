@@ -96,9 +96,9 @@ The **SCProxy** class contains all of the information associated with proxy conn
 
 ==== Registering Metadata for Kryo Serialization
 
-If your Apache StormCrawler topology doesn't extend `org.apache.storm.crawler.ConfigurableTopology`, you will need to manually register StormCrawler's `Metadata` class for serialization in Storm. For more information on Kryo serialization in Apache Storm, you can refer to the link:https://storm.apache.org/documentation/Serialization.html[documentation].
+If your Apache StormCrawler topology doesn't extend `org.apache.stormcrawler.ConfigurableTopology`, you will need to manually register StormCrawler's `Metadata` class for serialization in Storm. For more information on Kryo serialization in Apache Storm, you can refer to the link:https://storm.apache.org/documentation/Serialization.html[documentation].
 
-To register `Metadata` for serialization, you'll need to import `backtype.storm.Config` and `org.apache.storm.crawler.Metadata`. Then, in your topology class, you'll register the class with:
+To register `Metadata` for serialization, you'll need to import `org.apache.storm.Config` and `org.apache.stormcrawler.Metadata`. Then, in your topology class, you'll register the class with:
 
 [source,java]
 ----
@@ -112,7 +112,7 @@ Alternatively, you can specify in the configuration file:
 [source,yaml]
 ----
 topology.kryo.register:
-  - org.apache.storm.crawler.Metadata
+  - org.apache.stormcrawler.Metadata
 ----
 
 ==== MetadataTransfer
@@ -201,7 +201,6 @@ implementation.
 | http.robots.file.skip | false | Ignore robots.txt rules (1.17+).
 | http.skip.robots | false | Deprecated (replaced by http.robots.file.skip).
 | http.store.headers | false | Whether to store response headers.
-| http.store.responsetime | true | Not yet implemented — intended to store response time in Metadata. Not present in default configuration.
 | http.timeout | 10000 | Connection timeout (ms).
 | http.use.cookies | false | Use cookies in subsequent requests.
 | https.protocol.implementation | org.apache.stormcrawler.protocol.httpclient.HttpProtocol | HTTPS Protocol
@@ -228,8 +227,7 @@ header.
 header.
 | http.content.partial.as.trimmed | false | Accepts partially fetched content in OKHTTP.
 | http.trust.everything | true | If true, trust all SSL/TLS connections.
-| navigationfilters.config.file | - | JSON config for NavigationFilter. See blog post
-.
+| navigationfilters.config.file | - | JSON config for NavigationFilter (used by the Selenium protocol module).
 | selenium.addresses | - | WebDriver server addresses.
 | selenium.capabilities | - | Desired WebDriver capabilities
 .
@@ -257,7 +255,7 @@ The values below are used by sub-classes of `AbstractIndexerBolt`.
 
 ==== Status Persistence
 
-This refers to persisting the status of a URL (e.g. ERROR, DISCOVERED etc.) along with asomething like a `nextFetchDate`
+This refers to persisting the status of a URL (e.g. ERROR, DISCOVERED etc.) along with something like a `nextFetchDate`
 that is being calculated by a link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/persistence/DefaultScheduler.java[Scheduler].
 
 [cols="1,1,3", options="header"]
@@ -286,16 +284,14 @@ Configures parsing of fetched text and the handling of discovered URIs
 | collections.key | collections | Key under which tags are stored in metadata.
 | feed.filter.hours.since.published | -1 | Discard feeds older than value hours.
 | feed.sniffContent | false | Try to detect feeds automatically.
-| parsefilters.config.file | parsefilters.json | Path to JSON config defining ParseFilters. See example
-.
+| parsefilters.config.file | parsefilters.json | Path to JSON config defining ParseFilters. See link:https://github.com/apache/stormcrawler/blob/main/core/src/main/resources/parsefilters.json[default parsefilters.json].
 | parser.emitOutlinks | true | Emit discovered links as DISCOVERED tuples.
 | parser.emitOutlinks.max.per.page | -1 | Limit number of emitted links per page.
 | textextractor.exclude.tags | "" | HTML tags ignored by TextExtractor.
 | textextractor.include.pattern | "" | Regex patterns to include for TextExtractor.
 | textextractor.no.text | false | Disable text extraction entirely.
 | track.anchors | true | Add anchor text to outlink metadata.
-| urlfilters.config.file | urlfilters.json | JSON file defining URL filters. See default
-.
+| urlfilters.config.file | urlfilters.json | JSON file defining URL filters. See link:https://github.com/apache/stormcrawler/blob/main/archetype/src/main/resources/archetype-resources/src/main/resources/urlfilters.json[default urlfilters.json].
 |===
 
 ====  Metadata

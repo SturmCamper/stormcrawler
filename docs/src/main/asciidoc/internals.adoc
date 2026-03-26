@@ -21,7 +21,7 @@ A bolt which sends tuples on the _status_ stream declares its output in the foll
 [source,java]
 ----
 declarer.declareStream(
-    org.apache.storm.crawler.Constants.StatusStreamName,
+    org.apache.stormcrawler.Constants.StatusStreamName,
     new Fields("url", "metadata", "status"));
 ----
 
@@ -33,7 +33,7 @@ The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org
 * REDIRECTION:: set by the fetcher bolts.
 * FETCH_ERROR:: set by the fetcher bolts.
 * ERROR:: used by either the fetcher, parser, or indexer bolts.
-* FETCHED:: set by the StatusStreamBolt bolt (see below).
+* FETCHED:: set by the DummyIndexer bolt (see below).
 
 The difference between FETCH_ERROR and ERROR is that the former is possibly transient whereas the latter is terminal. The bolt which is in charge of updating the status (see below) can then decide when and whether to schedule a new fetch for a URL based on the status value.
 
@@ -59,11 +59,11 @@ Both declare the same output:
 ----
 declarer.declare(new Fields("url", "content", "metadata"));
 declarer.declareStream(
-        org.apache.storm.crawler.Constants.StatusStreamName,
+        org.apache.stormcrawler.Constants.StatusStreamName,
         new Fields("url", "metadata", "status"));
 ----
 
-with the `StatusStream` being used for handling redirections, restrictions by robots directives, or fetch errors, whereas the default stream gets the binary content returned by the server as well as the metadata to the following components (typically a parsing bolt).
+with the status stream being used for handling redirections, restrictions by robots directives, or fetch errors, whereas the default stream gets the binary content returned by the server as well as the metadata to the following components (typically a parsing bolt).
 
 Both use the same xref:protocols[Protocols] implementations and xref:urlfilters[URLFilters] to control the redirections.
 
@@ -108,7 +108,7 @@ The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org
 
 This parser calls the xref:urlfilters[URLFilters] and xref:parsefilters[ParseFilters] defined in the configuration. Please note that it calls xref:metadatatransfer[MetadataTransfer] prior to calling the xref:parsefilters[ParseFilters]. If you create new Outlinks in your [[ParseFilters]], you'll need to make sure that you use MetadataTransfer there to inherit the Metadata from the parent document.
 
-The **JSoupParserBolt** automatically identifies the charset of the documents. It uses the link:StatusStream[status stream] to report parsing errors but also for the outlinks it extracts from a page. These would typically be used by an extension of link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/persistence/AbstractStatusUpdaterBolt.java[AbstractStatusUpdaterBolt] and persisted in some form of storage.
+The **JSoupParserBolt** automatically identifies the charset of the documents. It uses the status stream to report parsing errors but also for the outlinks it extracts from a page. These would typically be used by an extension of link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/persistence/AbstractStatusUpdaterBolt.java[AbstractStatusUpdaterBolt] and persisted in some form of storage.
 
 ==== SiteMapParserBolt
 StormCrawler can handle sitemap files thanks to the **SiteMapParserBolt**. This bolt should be placed before the standard **ParserBolt** in the topology, as illustrated in link:https://github.com/apache/stormcrawler/blob/main/archetype/src/main/resources/archetype-resources/src/main/java/CrawlTopology.java[CrawlTopology].
@@ -137,7 +137,7 @@ public boolean needsDOM();
 
 * The `filter` method is where the extraction occurs. ParseResult objects contain the outlinks extracted from the document as well as a Map of String to ParseData, where the String is the URL of a subdocument or the main document itself. ParseData objects contain Metadata, binary content, and text for the subdocuments, which is useful for indexing subdocuments independently of the main document.
 * The `needsDOM` method indicates whether the ParseFilter instance requires the DOM structure. If no ParseFilters need it, the parsing bolt will skip generating the DOM, slightly improving performance.
-* The `configure` method takes a JSON object loaded by the wrapper class ParseFilters. The Storm configuration map can also be used to configure the filters, as described in link:Configuration[Configuration].
+* The `configure` method takes a JSON object loaded by the wrapper class ParseFilters. The Storm configuration map can also be used to configure the filters, as described in xref:configuration.adoc[Configuration].
 
 Here is the default link:https://github.com/apache/stormcrawler/blob/main/core/src/main/resources/parsefilters.json[JSON configuration file] for ParseFilters. The configuration allows multiple instances of the same filter class with different parameters and supports complex parameter objects. ParseFilters are executed in the order they appear in the JSON file.
 
@@ -297,11 +297,11 @@ The class https://github.com/apache/stormcrawler/blob/main/core/src/main/java/or
 * Parsing
 * Updating bolts
 
-An instance (or extension) of MetadataTransfer gets created and configured with the method `public static MetadataTransfer getInstance(Map++<++String, Object++>++ conf)` which takes as parameter with the standard Apache Storm configuration.
+An instance (or extension) of MetadataTransfer gets created and configured with the method `public static MetadataTransfer getInstance(Map++<++String, Object++>++ conf)` which takes the standard Apache Storm configuration as a parameter.
 
 A *MetadataTransfer* instance has mainly two methods, both returning Metadata objects :
 
-* `getMetaForOutlink(String targetURL, String sourceURL,           Metadata parentMD)`
+* `getMetaForOutlink(String targetUrl, String sourceUrl, Metadata parentMetadata)`
 * `filter(Metadata metadata)`
 
 The former is used when creating https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/parse/Outlink.java[Outlinks] i.e. in the parsing bolts but also for handling redirections in the FetcherBolt(s)
@@ -309,12 +309,12 @@ The latter is used by extensions of the https://github.com/apache/stormcrawler/b
 
 The behavior of the default MetadataTransfer class is driven by configuration only. It has the following options.
 
-* `metadata.transfer` list of metadata key values to filter or transfer to the outlinks. See https://github.com/apache/stormcrawler/blob/main/core/src/main/resources/crawler-default.yaml#L23[crawler-default.yaml]
-* `metadata.persist` list of metadata key values to persist in the status storage. See https://github.com/apache/stormcrawler/blob/main/core/src/main/resources/crawler-default.yaml#L28[crawler-default.yaml]
+* `metadata.transfer` list of metadata key values to filter or transfer to the outlinks. See https://github.com/apache/stormcrawler/blob/main/core/src/main/resources/crawler-default.yaml#L70[crawler-default.yaml]
+* `metadata.persist` list of metadata key values to persist in the status storage. See https://github.com/apache/stormcrawler/blob/main/core/src/main/resources/crawler-default.yaml#L75[crawler-default.yaml]
 * `metadata.track.path` whether to track the URL path or not. Boolean value, true by default.
 * `metadata.track.depth` whether to track the depth from seed. Boolean value, true by default.
 
-Note that the method `getMetaForOutlink` calls `filter` to determine what to key values to keep.
+Note that the method `getMetaForOutlink` calls `filter` to determine what key values to keep.
 
 [[protocols]]
 === Protocols
@@ -336,9 +336,9 @@ The following network protocols are implemented in StormCrawler:
 
 ===== HTTP/S
 
-See [[HTTPProtocol]] for the effect of metadata content on protocol behaviour.
+See <<Metadata-dependent Behavior For HTTP Protocols>> for the effect of metadata content on protocol behaviour.
 
-To change the implementation, add the following lines to your _crawler-conf.yaml_:
+To change the implementation, add the following lines to your custom configuration YAML file:
 
 [source,yaml]
 ----
@@ -347,7 +347,7 @@ https.protocol.implementation: "org.apache.stormcrawler.protocol.okhttp.HttpProt
 ----
 
 * link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/protocol/httpclient/HttpProtocol.java[HttpClient]
-* link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/protocol/selenium/SeleniumProtocol.java[Selenium]
+* link:https://github.com/apache/stormcrawler/blob/main/external/selenium/src/main/java/org/apache/stormcrawler/protocol/selenium/SeleniumProtocol.java[Selenium]
 * link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/protocol/okhttp/HttpProtocol.java[OKHttp]
 
 ==== Feature grid
@@ -376,7 +376,7 @@ https.protocol.implementation: "org.apache.stormcrawler.protocol.okhttp.HttpProt
 
 * The link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/protocol/okhttp/HttpProtocol.java[OKHttp] protocol supports link:https://en.wikipedia.org/wiki/HTTP/2[HTTP/2] if the JDK includes link:https://en.wikipedia.org/wiki/Application-Layer_Protocol_Negotiation[ALPN] (Java 9 and upwards or Java 8 builds starting early/mid 2020).
 * link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/protocol/httpclient/HttpProtocol.java[HttpClient] does not yet support HTTP/2.
-* link:https://github.com/apache/stormcrawler/blob/main/core/src/main/java/org/apache/stormcrawler/protocol/selenium/SeleniumProtocol.java[Selenium]: whether HTTP/2 is used or not depends on the used driver.
+* link:https://github.com/apache/stormcrawler/blob/main/external/selenium/src/main/java/org/apache/stormcrawler/protocol/selenium/SeleniumProtocol.java[Selenium]: whether HTTP/2 is used or not depends on the used driver.
 
 Since link:https://github.com/apache/stormcrawler/pull/829[#829], the HTTP protocol version used is configurable via `http.protocol.versions` (see also comments in link:https://github.com/apache/stormcrawler/blob/main/core/src/main/resources/crawler-default.yaml[crawler-default.yaml]).
 
